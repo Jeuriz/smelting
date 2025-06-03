@@ -791,10 +791,17 @@
 
         function updateOutputPreview() {
             const outputSlots = document.querySelectorAll('#outputSlots .slot');
-            outputSlots.forEach(slot => {
-                slot.innerHTML = '';
-                slot.classList.remove('has-item');
+            
+            // Primero, limpiar slots que no tienen items procesados
+            outputSlots.forEach((slot, index) => {
+                if (index >= Object.keys(furnaceData.outputItems).length) {
+                    slot.innerHTML = '';
+                    slot.classList.remove('has-item');
+                }
             });
+            
+            // Mostrar items ya procesados primero
+            let slotIndex = Object.keys(furnaceData.outputItems).length;
             
             furnaceData.currentOutput = {};
             
@@ -811,13 +818,13 @@
                 }
             }
             
-            // Mostrar output
-            let slotIndex = 0;
+            // Mostrar preview del output
             for (const [item, amount] of Object.entries(furnaceData.currentOutput)) {
                 if (slotIndex >= 10) break;
                 
                 const slot = outputSlots[slotIndex];
                 slot.classList.add('has-item');
+                slot.style.opacity = '0.6'; // Para indicar que es un preview
                 slot.innerHTML = `
                     <div class="slot-item">
                         <div class="slot-icon">
@@ -911,13 +918,23 @@
         }
 
         function takeOre() {
-            // Implementar lógica para tomar solo los minerales
-            console.log('Taking ore...');
+            fetch(`https://${GetParentResourceName()}/takeOre`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({})
+            });
         }
 
         function takeAll() {
-            // Implementar lógica para tomar todo
-            console.log('Taking all...');
+            fetch(`https://${GetParentResourceName()}/takeAll`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({})
+            });
         }
 
         function closeFurnace() {

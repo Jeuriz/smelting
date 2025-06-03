@@ -3,261 +3,460 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Fundición</title>
+    <title>Large Furnace</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Oswald', sans-serif;
             background: transparent;
-            color: #fff;
+            color: #e0e0e0;
             overflow: hidden;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
-        .container {
-            display: none; /* HIDDEN BY DEFAULT */
+        .furnace-container {
+            display: none;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 800px;
-            max-height: 600px;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 1px solid #444;
-            overflow: hidden;
+            width: 600px;
+            background-color: #2a2a2a;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+                url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAKElEQVQImWNgYGD4z8DAwMDIwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAaAwQADQgEAQAAAABJRU5ErkJggg==');
+            border: 3px solid #1a1a1a;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.5);
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
-        .header {
-            background: linear-gradient(90deg, #ff6b35, #f7931e);
-            padding: 20px;
-            text-align: center;
+        .furnace-container.show {
+            display: block;
+        }
+
+        .furnace-header {
+            background: linear-gradient(to bottom, #3a3a3a, #2a2a2a);
+            padding: 15px 20px;
+            border-bottom: 2px solid #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             position: relative;
         }
 
-        .header h1 {
-            font-size: 24px;
-            margin: 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        .furnace-title {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 28px;
+            color: #d4d4d4;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-header {
+            background: #4a4a4a;
+            border: 2px solid #5a5a5a;
+            color: #d4d4d4;
+            padding: 8px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .btn-header:hover {
+            background: #5a5a5a;
+            border-color: #6a6a6a;
+            transform: translateY(-1px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.6);
+        }
+
+        .btn-header:active {
+            transform: translateY(0);
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        .btn-take-ore {
+            background: #8B6914;
+            border-color: #A47E1B;
+        }
+
+        .btn-take-ore:hover {
+            background: #A47E1B;
+            border-color: #B8922F;
+        }
+
+        .btn-take-all {
+            background: #3B5E3B;
+            border-color: #4A7A4A;
+        }
+
+        .btn-take-all:hover {
+            background: #4A7A4A;
+            border-color: #5A8A5A;
         }
 
         .close-btn {
             position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.2);
+            right: 10px;
+            top: 10px;
+            background: transparent;
             border: none;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 50%;
+            color: #888;
+            font-size: 24px;
             cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
+            padding: 5px;
+            line-height: 1;
+            transition: color 0.2s;
         }
 
         .close-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-50%) scale(1.1);
+            color: #d4d4d4;
         }
 
-        .content {
-            padding: 30px;
-            max-height: 480px;
-            overflow-y: auto;
-        }
-
-        .section {
-            margin-bottom: 25px;
-            background: rgba(255, 255, 255, 0.05);
+        .furnace-content {
             padding: 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0,0,0,0.3);
         }
 
-        .section-title {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #ff6b35;
-            border-bottom: 2px solid #ff6b35;
-            padding-bottom: 5px;
+        .furnace-section {
+            margin-bottom: 20px;
         }
 
-        .fuel-section {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .fuel-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .fuel-group label {
-            font-size: 14px;
-            color: #ccc;
-        }
-
-        select, input[type="number"] {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            min-width: 120px;
-        }
-
-        select:focus, input[type="number"]:focus {
-            outline: none;
-            border-color: #ff6b35;
-            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
-        }
-
-        .items-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .item-card {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 15px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .item-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.2);
-            border-color: #ff6b35;
-        }
-
-        .item-card.selected {
-            border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.1);
-        }
-
-        .item-name {
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #fff;
-            text-transform: capitalize;
-        }
-
-        .item-info {
+        .section-label {
             font-size: 12px;
-            color: #aaa;
-            margin-bottom: 10px;
-        }
-
-        .item-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .quantity-input {
-            width: 60px;
-            padding: 5px;
-            font-size: 12px;
-            min-width: unset;
-        }
-
-        .available-qty {
-            font-size: 12px;
-            color: #ff6b35;
-        }
-
-        .summary {
-            background: linear-gradient(135deg, #ff6b35, #f7931e);
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .summary-item:last-child {
-            margin-bottom: 0;
-            font-weight: bold;
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
-            padding-top: 8px;
-        }
-
-        .smelt-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            border: none;
-            color: #fff;
-            padding: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s ease;
+            color: #999;
             text-transform: uppercase;
             letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
         }
 
-        .smelt-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        .fuel-slot {
+            width: 80px;
+            height: 80px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .smelt-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .fuel-slot:hover {
+            border-color: #555;
+            background: #222;
         }
 
-        .no-items {
+        .fuel-slot.has-fuel {
+            border-color: #8B6914;
+        }
+
+        .slot-item {
+            position: relative;
             text-align: center;
-            color: #888;
-            font-style: italic;
-            padding: 30px;
         }
 
-        /* Scrollbar personalizada */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .slot-icon {
+            width: 48px;
+            height: 48px;
+            background: #444;
+            margin: 0 auto 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
         }
 
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+        .slot-count {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            font-size: 12px;
+            padding: 2px 6px;
+            font-weight: 600;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #ff6b35;
-            border-radius: 10px;
+        .slots-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #f7931e;
+        .input-slots, .output-slots {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border: 1px solid #333;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .slot {
+            width: 90px;
+            height: 90px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .slot:hover {
+            border-color: #555;
+            background: #222;
+        }
+
+        .slot.active {
+            border-color: #8B6914;
+            background: #2a2a1a;
+        }
+
+        .slot.has-item {
+            border-color: #4a4a4a;
+        }
+
+        .arrow-down {
+            text-align: center;
+            font-size: 24px;
+            color: #666;
+            margin: 15px 0;
+        }
+
+        .bottom-actions {
+            background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+            padding: 15px 20px;
+            border-top: 2px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .choose-ore-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .choose-label {
+            background: #3a3a3a;
+            padding: 10px 20px;
+            border: 2px solid #4a4a4a;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #999;
+        }
+
+        .ore-selection {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ore-option {
+            width: 50px;
+            height: 50px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .ore-option:hover {
+            border-color: #666;
+            background: #222;
+        }
+
+        .ore-option.selected {
+            border-color: #8B6914;
+            background: #2a2a1a;
+        }
+
+        .ore-option .ore-icon {
+            font-size: 20px;
+        }
+
+        .btn-turn-on {
+            background: linear-gradient(to bottom, #4a7a4a, #3a6a3a);
+            border: 2px solid #5a8a5a;
+            color: #d4d4d4;
+            padding: 12px 30px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.6);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-turn-on:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #5a8a5a, #4a7a4a);
+            border-color: #6a9a6a;
+            transform: translateY(-1px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 6px 12px rgba(0,0,0,0.7);
+        }
+
+        .btn-turn-on:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .btn-turn-on:disabled {
+            background: #2a2a2a;
+            border-color: #3a3a3a;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .fire-icon {
+            color: #ff6b35;
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+        }
+
+        /* Selector de combustible mejorado */
+        .fuel-selector {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            min-width: 200px;
+            z-index: 1000;
+            margin-top: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.8);
+        }
+
+        .fuel-selector.show {
+            display: block;
+        }
+
+        .fuel-option {
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fuel-option:hover {
+            background: #2a2a2a;
+        }
+
+        .fuel-amount {
+            color: #8B6914;
+            font-weight: 600;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.95);
+            border: 1px solid #333;
+            padding: 8px 12px;
+            font-size: 12px;
+            z-index: 1001;
+            pointer-events: none;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .tooltip.show {
+            display: block;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #333;
+            padding: 20px;
+            min-width: 300px;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-label {
+            color: #d4d4d4;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #8B6914, #A47E1B);
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: inset 0 0 10px rgba(255, 200, 0, 0.3);
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
         /* Animaciones */
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translate(-50%, -60%);
+                transform: translate(-50%, -48%);
             }
             to {
                 opacity: 1;
@@ -265,296 +464,381 @@
             }
         }
 
-        .container.show {
-            display: block;
+        .furnace-container.show {
             animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 0;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="smeltingContainer">
-        <div class="header">
-            <h1>🔥 Sistema de Fundición</h1>
-            <button class="close-btn" onclick="closeSmelting()">✕</button>
+    <div class="furnace-container" id="furnaceContainer">
+        <div class="furnace-header">
+            <h1 class="furnace-title">LARGE FURNACE</h1>
+            <div class="header-actions">
+                <button class="btn-header btn-take-ore" onclick="takeOre()">TAKE ORE</button>
+                <button class="btn-header btn-take-all" onclick="takeAll()">TAKE ALL</button>
+            </div>
+            <button class="close-btn" onclick="closeFurnace()">✕</button>
         </div>
         
-        <div class="content">
-            <!-- Sección de Combustible -->
-            <div class="section">
-                <div class="section-title">⛽ Combustible</div>
-                <div class="fuel-section">
-                    <div class="fuel-group">
-                        <label>Tipo de Combustible:</label>
-                        <select id="fuelType">
-                            <option value="">Seleccionar...</option>
-                        </select>
+        <div class="furnace-content">
+            <!-- FUEL Section -->
+            <div class="furnace-section">
+                <div class="section-label">FUEL</div>
+                <div class="fuel-slot" id="fuelSlot" onclick="toggleFuelSelector()">
+                    <div class="slot-item" id="fuelDisplay">
+                        <div class="slot-icon">🔥</div>
                     </div>
-                    <div class="fuel-group">
-                        <label>Cantidad:</label>
-                        <input type="number" id="fuelAmount" min="1" max="999" value="1">
-                    </div>
-                    <div class="fuel-group">
-                        <label>Disponible:</label>
-                        <span id="availableFuel" class="available-qty">0</span>
+                </div>
+                <div class="fuel-selector" id="fuelSelector"></div>
+            </div>
+
+            <!-- INPUT Section -->
+            <div class="furnace-section">
+                <div class="section-label">INPUT</div>
+                <div class="input-slots">
+                    <div class="slots-container" id="inputSlots">
+                        <div class="slot" data-slot="0"></div>
+                        <div class="slot" data-slot="1"></div>
+                        <div class="slot" data-slot="2"></div>
+                        <div class="slot" data-slot="3"></div>
+                        <div class="slot" data-slot="4"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sección de Materiales -->
-            <div class="section">
-                <div class="section-title">⛏️ Materiales para Fundir</div>
-                <div class="items-grid" id="itemsGrid">
-                    <div class="no-items">No tienes materiales para fundir</div>
+            <div class="arrow-down">▼</div>
+
+            <!-- OUTPUT Section -->
+            <div class="furnace-section">
+                <div class="section-label">OUTPUT</div>
+                <div class="output-slots">
+                    <div class="slots-container" id="outputSlots">
+                        <div class="slot" data-slot="0"></div>
+                        <div class="slot" data-slot="1"></div>
+                        <div class="slot" data-slot="2"></div>
+                        <div class="slot" data-slot="3"></div>
+                        <div class="slot" data-slot="4"></div>
+                        <div class="slot" data-slot="5"></div>
+                        <div class="slot" data-slot="6"></div>
+                        <div class="slot" data-slot="7"></div>
+                        <div class="slot" data-slot="8"></div>
+                        <div class="slot" data-slot="9"></div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Resumen -->
-            <div class="summary" id="summary" style="display: none;">
-                <div class="section-title" style="color: #fff; border-color: #fff;">📊 Resumen del Proceso</div>
-                <div id="summaryContent"></div>
+        <div class="bottom-actions">
+            <div class="choose-ore-section">
+                <div class="choose-label">CHOOSE ORE:</div>
+                <div class="ore-selection" id="oreSelection"></div>
             </div>
-
-            <!-- Botón de Fundición -->
-            <button class="smelt-btn" id="smeltBtn" onclick="startSmelting()" disabled>
-                🔥 Comenzar Fundición
+            <button class="btn-turn-on" id="turnOnBtn" onclick="startSmelting()" disabled>
+                <span class="fire-icon">🔥</span> TURN ON
             </button>
         </div>
     </div>
 
+    <!-- Progress Container -->
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-label" id="progressLabel">Smelting in progress...</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
     <script>
-        let currentData = {
+        let furnaceData = {
             items: {},
             fuel: {},
             smeltingRules: {},
-            selectedItems: {}
+            selectedFuel: null,
+            selectedFuelAmount: 0,
+            selectedOres: {},
+            currentOutput: {}
         };
 
-        // Listener para mensajes desde el cliente
+        // Event listener para mensajes
         window.addEventListener('message', function(event) {
             const data = event.data;
             
             if (data.action === 'openSmelting') {
-                currentData.items = data.items || {};
-                currentData.fuel = data.fuel || {};
-                currentData.smeltingRules = data.smeltingRules || {};
-                currentData.selectedItems = {};
+                furnaceData.items = data.items || {};
+                furnaceData.fuel = data.fuel || {};
+                furnaceData.smeltingRules = data.smeltingRules || {};
+                furnaceData.selectedOres = {};
+                furnaceData.currentOutput = {};
                 
-                setupUI();
-                document.getElementById('smeltingContainer').classList.add('show');
+                setupFurnaceUI();
+                document.getElementById('furnaceContainer').classList.add('show');
             } else if (data.action === 'closeSmelting') {
-                document.getElementById('smeltingContainer').classList.remove('show');
+                document.getElementById('furnaceContainer').classList.remove('show');
             }
         });
 
-        function setupUI() {
-            setupFuelSection();
-            setupItemsSection();
-            updateSummary();
+        function setupFurnaceUI() {
+            setupOreSelection();
+            updateUI();
         }
 
-        function setupFuelSection() {
-            const fuelSelect = document.getElementById('fuelType');
-            const fuelAmount = document.getElementById('fuelAmount');
-            const availableFuel = document.getElementById('availableFuel');
+        function setupOreSelection() {
+            const oreSelection = document.getElementById('oreSelection');
+            oreSelection.innerHTML = '';
             
-            // Limpiar opciones anteriores
-            fuelSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            for (const [itemName, amount] of Object.entries(furnaceData.items)) {
+                if (furnaceData.smeltingRules[itemName]) {
+                    const oreOption = document.createElement('div');
+                    oreOption.className = 'ore-option';
+                    oreOption.setAttribute('data-ore', itemName);
+                    oreOption.setAttribute('data-amount', amount);
+                    oreOption.onclick = () => selectOre(itemName);
+                    
+                    oreOption.innerHTML = `
+                        <span class="ore-icon">⛏️</span>
+                        <div class="tooltip-content" style="display:none">
+                            ${formatItemName(itemName)} (${amount})
+                        </div>
+                    `;
+                    
+                    oreSelection.appendChild(oreOption);
+                }
+            }
+        }
+
+        function toggleFuelSelector() {
+            const selector = document.getElementById('fuelSelector');
+            selector.innerHTML = '';
             
-            // Agregar combustibles disponibles
-            for (const [fuelType, amount] of Object.entries(currentData.fuel)) {
-                const option = document.createElement('option');
-                option.value = fuelType;
-                option.textContent = capitalizeFirst(fuelType.replace('_', ' '));
-                fuelSelect.appendChild(option);
+            if (Object.keys(furnaceData.fuel).length === 0) return;
+            
+            for (const [fuelType, amount] of Object.entries(furnaceData.fuel)) {
+                const option = document.createElement('div');
+                option.className = 'fuel-option';
+                option.onclick = () => selectFuel(fuelType, amount);
+                
+                option.innerHTML = `
+                    <span>${formatItemName(fuelType)}</span>
+                    <span class="fuel-amount">x${amount}</span>
+                `;
+                
+                selector.appendChild(option);
             }
             
-            // Event listeners
-            fuelSelect.addEventListener('change', function() {
-                const selectedFuel = this.value;
-                if (selectedFuel && currentData.fuel[selectedFuel]) {
-                    availableFuel.textContent = currentData.fuel[selectedFuel];
-                    fuelAmount.max = currentData.fuel[selectedFuel];
-                } else {
-                    availableFuel.textContent = '0';
-                    fuelAmount.max = '0';
-                }
-                updateSummary();
+            selector.classList.toggle('show');
+        }
+
+        function selectFuel(fuelType, maxAmount) {
+            furnaceData.selectedFuel = fuelType;
+            furnaceData.selectedFuelAmount = Math.min(99, maxAmount);
+            
+            const fuelDisplay = document.getElementById('fuelDisplay');
+            fuelDisplay.innerHTML = `
+                <div class="slot-icon">🪵</div>
+                <span class="slot-count">x${furnaceData.selectedFuelAmount}</span>
+            `;
+            
+            document.getElementById('fuelSlot').classList.add('has-fuel');
+            document.getElementById('fuelSelector').classList.remove('show');
+            
+            updateUI();
+        }
+
+        function selectOre(oreName) {
+            const oreOption = document.querySelector(`[data-ore="${oreName}"]`);
+            const maxAmount = parseInt(oreOption.getAttribute('data-amount'));
+            
+            if (furnaceData.selectedOres[oreName]) {
+                delete furnaceData.selectedOres[oreName];
+                oreOption.classList.remove('selected');
+            } else {
+                // Límite de 5 slots de input
+                if (Object.keys(furnaceData.selectedOres).length >= 5) return;
+                
+                furnaceData.selectedOres[oreName] = Math.min(20, maxAmount);
+                oreOption.classList.add('selected');
+            }
+            
+            updateInputSlots();
+            updateOutputPreview();
+            updateUI();
+        }
+
+        function updateInputSlots() {
+            const inputSlots = document.querySelectorAll('#inputSlots .slot');
+            inputSlots.forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('has-item');
             });
             
-            fuelAmount.addEventListener('input', updateSummary);
-        }
-
-        function setupItemsSection() {
-            const itemsGrid = document.getElementById('itemsGrid');
-            
-            if (Object.keys(currentData.items).length === 0) {
-                itemsGrid.innerHTML = '<div class="no-items">No tienes materiales para fundir</div>';
-                return;
-            }
-            
-            itemsGrid.innerHTML = '';
-            
-            for (const [itemName, available] of Object.entries(currentData.items)) {
-                const rule = currentData.smeltingRules[itemName];
-                if (!rule) continue;
+            let slotIndex = 0;
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                if (slotIndex >= 5) break;
                 
-                const itemCard = createItemCard(itemName, available, rule);
-                itemsGrid.appendChild(itemCard);
-            }
-        }
-
-        function createItemCard(itemName, available, rule) {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            card.onclick = () => toggleItemSelection(itemName, card);
-            
-            card.innerHTML = `
-                <div class="item-name">${capitalizeFirst(itemName.replace('_', ' '))}</div>
-                <div class="item-info">
-                    Resultado: ${capitalizeFirst(rule.result.replace('_', ' '))} x${rule.amount}<br>
-                    Tiempo: ${rule.time / 1000}s | Combustible: ${rule.fuel_needed}
-                </div>
-                <div class="item-controls">
-                    <input type="number" class="quantity-input" min="1" max="${available}" value="1" 
-                           onclick="event.stopPropagation()" onchange="updateItemQuantity('${itemName}', this.value)">
-                    <span class="available-qty">/${available}</span>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        function toggleItemSelection(itemName, cardElement) {
-            const quantityInput = cardElement.querySelector('.quantity-input');
-            const quantity = parseInt(quantityInput.value) || 1;
-            
-            if (currentData.selectedItems[itemName]) {
-                // Deseleccionar
-                delete currentData.selectedItems[itemName];
-                cardElement.classList.remove('selected');
-            } else {
-                // Seleccionar
-                currentData.selectedItems[itemName] = quantity;
-                cardElement.classList.add('selected');
-            }
-            
-            updateSummary();
-        }
-
-        function updateItemQuantity(itemName, quantity) {
-            quantity = parseInt(quantity) || 1;
-            if (currentData.selectedItems[itemName]) {
-                currentData.selectedItems[itemName] = quantity;
-                updateSummary();
-            }
-        }
-
-        function updateSummary() {
-            const summary = document.getElementById('summary');
-            const summaryContent = document.getElementById('summaryContent');
-            const smeltBtn = document.getElementById('smeltBtn');
-            
-            const selectedCount = Object.keys(currentData.selectedItems).length;
-            const fuelType = document.getElementById('fuelType').value;
-            const fuelAmount = parseInt(document.getElementById('fuelAmount').value) || 0;
-            
-            if (selectedCount === 0 || !fuelType || fuelAmount === 0) {
-                summary.style.display = 'none';
-                smeltBtn.disabled = true;
-                return;
-            }
-            
-            // Calcular totales
-            let totalTime = 0;
-            let totalFuelNeeded = 0;
-            let results = {};
-            
-            for (const [itemName, quantity] of Object.entries(currentData.selectedItems)) {
-                const rule = currentData.smeltingRules[itemName];
-                if (!rule) continue;
+                const slot = inputSlots[slotIndex];
+                slot.classList.add('has-item');
+                slot.innerHTML = `
+                    <div class="slot-item">
+                        <div class="slot-icon">⛏️</div>
+                        <span class="slot-count">x${amount}</span>
+                    </div>
+                `;
                 
-                totalTime += rule.time * quantity;
-                totalFuelNeeded += rule.fuel_needed * quantity;
-                
-                const resultAmount = rule.amount * quantity;
-                if (results[rule.result]) {
-                    results[rule.result] += resultAmount;
-                } else {
-                    results[rule.result] = resultAmount;
+                slotIndex++;
+            }
+        }
+
+        function updateOutputPreview() {
+            const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            outputSlots.forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('has-item');
+            });
+            
+            furnaceData.currentOutput = {};
+            
+            // Calcular output basado en los ores seleccionados
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                const rule = furnaceData.smeltingRules[ore];
+                if (rule) {
+                    const outputAmount = rule.amount * amount;
+                    if (furnaceData.currentOutput[rule.result]) {
+                        furnaceData.currentOutput[rule.result] += outputAmount;
+                    } else {
+                        furnaceData.currentOutput[rule.result] = outputAmount;
+                    }
                 }
             }
             
-            // Generar contenido del resumen
-            let summaryHTML = '';
-            
-            // Mostrar resultados
-            for (const [result, amount] of Object.entries(results)) {
-                summaryHTML += `
-                    <div class="summary-item">
-                        <span>Obtendrás:</span>
-                        <span>${capitalizeFirst(result.replace('_', ' '))} x${amount}</span>
+            // Mostrar output
+            let slotIndex = 0;
+            for (const [item, amount] of Object.entries(furnaceData.currentOutput)) {
+                if (slotIndex >= 10) break;
+                
+                const slot = outputSlots[slotIndex];
+                slot.classList.add('has-item');
+                slot.innerHTML = `
+                    <div class="slot-item">
+                        <div class="slot-icon">🔧</div>
+                        <span class="slot-count">x${amount}</span>
                     </div>
                 `;
+                
+                slotIndex++;
+            }
+        }
+
+        function updateUI() {
+            const turnOnBtn = document.getElementById('turnOnBtn');
+            const hasOres = Object.keys(furnaceData.selectedOres).length > 0;
+            const hasFuel = furnaceData.selectedFuel && furnaceData.selectedFuelAmount > 0;
+            
+            // Calcular combustible necesario
+            let totalFuelNeeded = 0;
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                const rule = furnaceData.smeltingRules[ore];
+                if (rule) {
+                    totalFuelNeeded += rule.fuel_needed * amount;
+                }
             }
             
-            summaryHTML += `
-                <div class="summary-item">
-                    <span>Tiempo total:</span>
-                    <span>${(totalTime / 1000).toFixed(1)}s</span>
-                </div>
-                <div class="summary-item">
-                    <span>Combustible necesario:</span>
-                    <span>${totalFuelNeeded} ${capitalizeFirst(fuelType.replace('_', ' '))}</span>
-                </div>
-            `;
+            const canSmelt = hasOres && hasFuel && furnaceData.selectedFuelAmount >= totalFuelNeeded;
+            turnOnBtn.disabled = !canSmelt;
             
-            summaryContent.innerHTML = summaryHTML;
-            summary.style.display = 'block';
-            
-            // Verificar si se puede realizar la fundición
-            const canSmelt = fuelAmount >= totalFuelNeeded && totalFuelNeeded > 0;
-            smeltBtn.disabled = !canSmelt;
-            
-            if (!canSmelt && totalFuelNeeded > 0) {
-                smeltBtn.textContent = `Necesitas ${totalFuelNeeded - fuelAmount} más combustible`;
+            if (!canSmelt && totalFuelNeeded > 0 && hasFuel) {
+                turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${totalFuelNeeded - furnaceData.selectedFuelAmount} MORE FUEL`;
             } else {
-                smeltBtn.textContent = '🔥 Comenzar Fundición';
+                turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> TURN ON`;
             }
         }
 
         function startSmelting() {
-            const fuelType = document.getElementById('fuelType').value;
-            const fuelAmount = parseInt(document.getElementById('fuelAmount').value) || 0;
-            
-            if (!fuelType || fuelAmount === 0 || Object.keys(currentData.selectedItems).length === 0) {
-                return;
-            }
+            if (!furnaceData.selectedFuel || Object.keys(furnaceData.selectedOres).length === 0) return;
             
             // Calcular tiempo total
             let totalTime = 0;
-            for (const [itemName, quantity] of Object.entries(currentData.selectedItems)) {
-                const rule = currentData.smeltingRules[itemName];
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                const rule = furnaceData.smeltingRules[ore];
                 if (rule) {
-                    totalTime += rule.time * quantity;
+                    totalTime += rule.time * amount;
                 }
             }
             
-            // Enviar datos al cliente
+            // Enviar al servidor
             fetch(`https://${GetParentResourceName()}/startSmelting`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json; charset=UTF-8',
                 },
                 body: JSON.stringify({
-                    selectedItems: currentData.selectedItems,
-                    fuelAmount: fuelAmount,
-                    fuelType: fuelType,
+                    selectedItems: furnaceData.selectedOres,
+                    fuelAmount: furnaceData.selectedFuelAmount,
+                    fuelType: furnaceData.selectedFuel,
                     totalTime: totalTime
                 })
             });
+            
+            // Mostrar progreso
+            showProgress(totalTime);
         }
 
-        function closeSmelting() {
+        function showProgress(totalTime) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.add('show');
+            
+            let elapsed = 0;
+            const interval = setInterval(() => {
+                elapsed += 100;
+                const progress = Math.min((elapsed / totalTime) * 100, 100);
+                
+                progressFill.style.width = progress + '%';
+                progressText.textContent = Math.floor(progress) + '%';
+                
+                if (elapsed >= totalTime) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        progressContainer.classList.remove('show');
+                        closeFurnace();
+                    }, 500);
+                }
+            }, 100);
+        }
+
+        function takeOre() {
+            // Implementar lógica para tomar solo los minerales
+            console.log('Taking ore...');
+        }
+
+        function takeAll() {
+            // Implementar lógica para tomar todo
+            console.log('Taking all...');
+        }
+
+        function closeFurnace() {
             fetch(`https://${GetParentResourceName()}/closeSmelting`, {
                 method: 'POST',
                 headers: {
@@ -564,19 +848,26 @@
             });
         }
 
-        function capitalizeFirst(str) {
-            return str.charAt(0).toUpperCase() + str.slice(1);
+        function formatItemName(name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
         // Cerrar con ESC
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                closeSmelting();
+                closeFurnace();
             }
         });
 
-        // REMOVED THE AUTO-LOAD DEMO DATA SECTION
-        // The UI will now only show when triggered by the client script
+        // Cerrar selector de combustible al hacer clic fuera
+        document.addEventListener('click', function(event) {
+            const fuelSlot = document.getElementById('fuelSlot');
+            const fuelSelector = document.getElementById('fuelSelector');
+            
+            if (!fuelSlot.contains(event.target)) {
+                fuelSelector.classList.remove('show');
+            }
+        });
     </script>
 </body>
 </html>

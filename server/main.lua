@@ -28,6 +28,36 @@ local function LoadSmeltingData()
     end
 end
 
+-- Función auxiliar para obtener la cantidad de un item
+local function GetItemCount(source, itemName)
+    if not source or not itemName then return 0 end
+    
+    -- Método 1: Intentar con tgiann-inventory
+    local success, result = pcall(function()
+        return exports['tgiann-inventory']:GetItemByName(source, itemName)
+    end)
+    
+    if success and result then
+        -- Manejar diferentes estructuras de respuesta
+        if type(result) == "table" then
+            return result.count or result.amount or 0
+        elseif type(result) == "number" then
+            return result
+        end
+    end
+    
+    -- Método 2: Intentar con QBCore si falla el primero
+    local Player = QBCore.Functions.GetPlayer(source)
+    if Player then
+        local item = Player.Functions.GetItemByName(itemName)
+        if item and item.amount then
+            return item.amount
+        end
+    end
+    
+    return 0
+end
+
 -- Cargar datos al iniciar el recurso
 CreateThread(function()
     Wait(1000) -- Esperar a que QBCore se inicialice
@@ -124,118 +154,26 @@ QBCore.Functions.CreateCallback('smelting:getPlayerItems', function(source, cb)
     -- Verificar si hay procesos pendientes al conectarse
     CheckPendingProcesses(source)
     
-    -- Obtener items fundibles usando tgiann-inventory exports
+    -- Obtener items fundibles
     if Config.SmeltingRules then
-        print("^3[Smelting Debug]^7 Config.SmeltingRules encontrado, buscando items:")
         for item, rule in pairs(Config.SmeltingRules) do
-            print("^2[Smelting Debug]^7 Buscando item: " .. tostring(item))
-            
-            -- Método 1: Usando GetItemByName directamente
-            local success1, itemData1 = pcall(function()
-                return exports['tgiann-inventory']:GetItemByName(source, item)
-            end)
-            
-            if success1 then
-                print("^2[Smelting Debug]^7 Método 1 exitoso para " .. item .. ":")
-                print("^2[Smelting Debug]^7 Tipo de dato: " .. type(itemData1))
-                if itemData1 then
-                    print("^2[Smelting Debug]^7 Contenido: " .. json.encode(itemData1))
-                    
-                    -- Verificar diferentes estructuras de datos
-                    if type(itemData1) == "table" then
-                        if itemData1.count and itemData1.count > 0 then
-                            items[item] = itemData1.count
-                            print("^2[Smelting Debug]^7 Item " .. item .. " agregado con cantidad: " .. tostring(itemData1.count))
-                        elseif itemData1.amount and itemData1.amount > 0 then
-                            items[item] = itemData1.amount
-                            print("^2[Smelting Debug]^7 Item " .. item .. " agregado con amount: " .. tostring(itemData1.amount))
-                        elseif type(itemData1) == "number" and itemData1 > 0 then
-                            items[item] = itemData1
-                            print("^2[Smelting Debug]^7 Item " .. item .. " agregado con valor numérico: " .. tostring(itemData1))
-                        else
-                            print("^1[Smelting Debug]^7 Item " .. item .. " no tiene count/amount válido o es 0")
-                        end
-                    elseif type(itemData1) == "number" and itemData1 > 0 then
-                        items[item] = itemData1
-                        print("^2[Smelting Debug]^7 Item " .. item .. " es número directo: " .. tostring(itemData1))
-                    else
-                        print("^1[Smelting Debug]^7 Item " .. item .. " no es tabla ni número")
-                    end
-                else
-                    print("^1[Smelting Debug]^7 Item " .. item .. " es nil")
-                end
-            else
-                print("^1[Smelting Debug]^7 Error método 1 para " .. item .. ": " .. tostring(itemData1))
-            end
-            
-            -- Método 2: Usando Player.Functions.GetItemByName si el método 1 falla
-            if not items[item] then
-                local Player = QBCore.Functions.GetPlayer(source)
-                if Player then
-                    local itemData2 = Player.Functions.GetItemByName(item)
-                    if itemData2 then
-                        print("^3[Smelting Debug]^7 Método 2 (QBCore) para " .. item .. ":")
-                        print("^3[Smelting Debug]^7 Contenido: " .. json.encode(itemData2))
-                        
-                        if itemData2.amount and itemData2.amount > 0 then
-                            items[item] = itemData2.amount
-                            print("^2[Smelting Debug]^7 Item " .. item .. " agregado vía QBCore con cantidad: " .. tostring(itemData2.amount))
-                        end
-                    else
-                        print("^1[Smelting Debug]^7 Item " .. item .. " no encontrado en QBCore tampoco")
-                    end
-                else
-                    print("^1[Smelting Debug]^7 No se pudo obtener Player para método 2")
-                end
+            local count = GetItemCount(source, item)
+            if count > 0 then
+                items[item] = count
+                print("^2[Smelting Debug]^7 Item " .. item .. " encontrado: " .. count)
             end
         end
-    else
-        print("^1[Smelting Debug]^7 Config.SmeltingRules es nil!")
     end
     
     -- Obtener combustibles
     if Config.FuelItems then
-        print("^3[Smelting Debug]^7 Buscando combustibles:")
         for _, fuelItem in pairs(Config.FuelItems) do
-            print("^2[Smelting Debug]^7 Buscando combustible: " .. tostring(fuelItem))
-            
-            -- Método 1: tgiann-inventory
-            local success1, fuelData1 = pcall(function()
-                return exports['tgiann-inventory']:GetItemByName(source, fuelItem)
-            end)
-            
-            if success1 and fuelData1 then
-                print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " encontrado:")
-                print("^2[Smelting Debug]^7 Contenido: " .. json.encode(fuelData1))
-                
-                if type(fuelData1) == "table" then
-                    if fuelData1.count and fuelData1.count > 0 then
-                        fuel[fuelItem] = fuelData1.count
-                        print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " agregado: " .. tostring(fuelData1.count))
-                    elseif fuelData1.amount and fuelData1.amount > 0 then
-                        fuel[fuelItem] = fuelData1.amount
-                        print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " agregado: " .. tostring(fuelData1.amount))
-                    end
-                elseif type(fuelData1) == "number" and fuelData1 > 0 then
-                    fuel[fuelItem] = fuelData1
-                    print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " agregado: " .. tostring(fuelData1))
-                end
-            else
-                print("^1[Smelting Debug]^7 Error obteniendo combustible " .. fuelItem .. ": " .. tostring(fuelData1))
-                
-                -- Método 2: QBCore
-                local Player = QBCore.Functions.GetPlayer(source)
-                if Player then
-                    local fuelData2 = Player.Functions.GetItemByName(fuelItem)
-                    if fuelData2 and fuelData2.amount and fuelData2.amount > 0 then
-                        fuel[fuelItem] = fuelData2.amount
-                        print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " agregado vía QBCore: " .. tostring(fuelData2.amount))
-                    end
-                end
+            local count = GetItemCount(source, fuelItem)
+            if count > 0 then
+                fuel[fuelItem] = count
+                print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " encontrado: " .. count)
             end
         end
-    else
-        print("^1[Smelting Debug]^7 Config.FuelItems es nil!")
     end
     
     print("^3[Smelting Debug]^7 Resultado final:")
@@ -298,9 +236,11 @@ QBCore.Functions.CreateCallback('smelting:startProcess', function(source, cb, se
         return cb(false, "Cantidad de combustible inválida")
     end
     
-    -- Verificar combustible usando tgiann-inventory
-    local success, fuelItem = pcall(exports['tgiann-inventory'].GetItemByName, exports['tgiann-inventory'], source, fuelType)
-    if not success or not fuelItem or not fuelItem.count or fuelItem.count < fuelAmount then
+    -- Verificar combustible usando la función auxiliar
+    local fuelCount = GetItemCount(source, fuelType)
+    print("^3[Smelting Debug]^7 Verificando combustible " .. fuelType .. ": " .. fuelCount .. " disponible, " .. fuelAmount .. " requerido")
+    
+    if fuelCount < fuelAmount then
         return cb(false, Config.Texts['no_fuel'] or 'No tienes suficiente combustible')
     end
     
@@ -313,8 +253,10 @@ QBCore.Functions.CreateCallback('smelting:startProcess', function(source, cb, se
         if item and amount and Config.SmeltingRules and Config.SmeltingRules[item] then
             amount = tonumber(amount) or 0
             if amount > 0 then
-                local itemSuccess, itemData = pcall(exports['tgiann-inventory'].GetItemByName, exports['tgiann-inventory'], source, item)
-                if not itemSuccess or not itemData or not itemData.count or itemData.count < amount then
+                local itemCount = GetItemCount(source, item)
+                print("^3[Smelting Debug]^7 Verificando material " .. item .. ": " .. itemCount .. " disponible, " .. amount .. " requerido")
+                
+                if itemCount < amount then
                     return cb(false, Config.Texts['no_materials'] or 'No tienes los materiales necesarios')
                 end
                 
@@ -336,7 +278,7 @@ QBCore.Functions.CreateCallback('smelting:startProcess', function(source, cb, se
     
     -- Verificar si tiene suficiente combustible
     if fuelAmount < totalFuelNeeded then
-        return cb(false, 'Necesitas más combustible para este proceso')
+        return cb(false, Config.Texts['insufficient_fuel'] or 'Necesitas más combustible para este proceso')
     end
     
     -- Remover items y combustible usando tgiann-inventory exports
@@ -345,6 +287,8 @@ QBCore.Functions.CreateCallback('smelting:startProcess', function(source, cb, se
             local removeSuccess = exports['tgiann-inventory']:RemoveItem(source, item, tonumber(amount))
             if removeSuccess then
                 TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "remove", tonumber(amount))
+            else
+                print("^1[Smelting Debug]^7 Error al remover " .. item .. " x" .. tonumber(amount))
             end
         end
     end
@@ -352,6 +296,8 @@ QBCore.Functions.CreateCallback('smelting:startProcess', function(source, cb, se
     local fuelSuccess = exports['tgiann-inventory']:RemoveItem(source, fuelType, totalFuelNeeded)
     if fuelSuccess then
         TriggerClientEvent('tgiann-inventory:client:ItemBox', source, fuelType, "remove", totalFuelNeeded)
+    else
+        print("^1[Smelting Debug]^7 Error al remover combustible " .. fuelType .. " x" .. totalFuelNeeded)
     end
     
     -- Guardar proceso con datos persistentes
@@ -470,5 +416,26 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName == GetCurrentResourceName() then
         SaveSmeltingData()
         print("^2[Smelting]^7 Datos guardados al detener el recurso")
+    end
+end)
+
+-- Comando de debug para verificar inventario
+RegisterCommand('smeltdebug', function(source, args, rawCommand)
+    if source > 0 then
+        print("^3[Smelting Debug]^7 === DEBUG INVENTARIO ===")
+        
+        -- Verificar items
+        for item, _ in pairs(Config.SmeltingRules) do
+            local count = GetItemCount(source, item)
+            print("^2[Smelting Debug]^7 " .. item .. ": " .. count)
+        end
+        
+        -- Verificar combustibles
+        for _, fuel in pairs(Config.FuelItems) do
+            local count = GetItemCount(source, fuel)
+            print("^2[Smelting Debug]^7 " .. fuel .. ": " .. count)
+        end
+        
+        TriggerClientEvent('smelting:notify', source, 'Revisa la consola del servidor para ver el debug', 'info')
     end
 end)

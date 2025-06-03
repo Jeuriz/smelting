@@ -12,36 +12,16 @@ Config.SmeltingDistance = 2.0 -- Distancia para interactuar
 
 -- Configuración de fundición
 Config.SmeltingRules = {
-    ['iron_ore'] = {
-        result = 'iron',
+    ['mena_aluminio'] = {
+        result = 'mena_azufre',
         amount = 2, -- Cantidad que se obtiene por cada mineral
         time = 5000, -- Tiempo en ms
         fuel_needed = 1 -- Combustible necesario por mineral
     },
-    ['copper_ore'] = {
-        result = 'copper',
-        amount = 2,
-        time = 4000,
-        fuel_needed = 1
-    },
-    ['gold_ore'] = {
-        result = 'gold',
-        amount = 1,
-        time = 8000,
-        fuel_needed = 2
-    },
-    ['diamond_ore'] = {
-        result = 'diamond',
-        amount = 1,
-        time = 10000,
-        fuel_needed = 3
-    }
 }
 
 -- Combustibles aceptados (en orden de eficiencia)
 Config.FuelItems = {
-    'gasoline', -- Más eficiente
-    'coal',     -- Eficiencia media
     'wood'      -- Menos eficiente
 }
 
@@ -63,3 +43,12 @@ Config.Texts = {
     ['inventory_full'] = 'Inventario lleno, algunos items se tiraron al suelo',
     ['insufficient_fuel'] = 'Combustible insuficiente para este proceso'
 }
+
+-- Configuración de ox_lib
+Config.UseOxLibNotifications = true -- Usar notificaciones de ox_lib
+Config.UseOxLibProgress = true -- Usar barra de progreso de ox_lib
+Config.UseOxLibTextUI = true -- Usar TextUI de ox_lib
+
+-- Configuración de cache
+Config.CacheTimeout = 5000 -- Tiempo en ms para mantener el cache de items
+Config.CacheCleanupTime = 60000 -- Tiempo en ms para limpiar cache antiguo

@@ -187,6 +187,15 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .slot-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: auto;
         }
 
         .slot-count {
@@ -302,7 +311,18 @@
         }
 
         .ore-option .ore-icon {
-            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .ore-option .ore-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .btn-turn-on {
@@ -580,6 +600,21 @@
             currentOutput: {}
         };
 
+        // Sistema de tooltip mejorado
+        function showTooltip(element, text) {
+            const tooltip = document.getElementById('tooltip');
+            const rect = element.getBoundingClientRect();
+            tooltip.textContent = text;
+            tooltip.style.left = rect.left + (rect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 30) + 'px';
+            tooltip.style.transform = 'translateX(-50%)';
+            tooltip.classList.add('show');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
         // Event listener para mensajes
         window.addEventListener('message', function(event) {
             const data = event.data;
@@ -616,11 +651,22 @@
                     oreOption.onclick = () => selectOre(itemName);
                     
                     oreOption.innerHTML = `
-                        <span class="ore-icon">⛏️</span>
+                        <span class="ore-icon">
+                            <img src="nui://inventory_images/images/${itemName}.webp" alt="${itemName}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
+                        </span>
                         <div class="tooltip-content" style="display:none">
                             ${formatItemName(itemName)} (${amount})
                         </div>
                     `;
+                    
+                    // Agregar eventos de hover para tooltip
+                    oreOption.addEventListener('mouseenter', function() {
+                        showTooltip(this, `${formatItemName(itemName)} (${amount})`);
+                    });
+                    
+                    oreOption.addEventListener('mouseleave', function() {
+                        hideTooltip();
+                    });
                     
                     oreSelection.appendChild(oreOption);
                 }
@@ -655,7 +701,9 @@
             
             const fuelDisplay = document.getElementById('fuelDisplay');
             fuelDisplay.innerHTML = `
-                <div class="slot-icon">🪵</div>
+                <div class="slot-icon">
+                    <img src="nui://inventory_images/images/${fuelType}.webp" alt="${fuelType}" onerror="this.style.display='none'; this.parentElement.innerHTML='🪵'">
+                </div>
                 <span class="slot-count">x${furnaceData.selectedFuelAmount}</span>
             `;
             
@@ -700,7 +748,9 @@
                 slot.classList.add('has-item');
                 slot.innerHTML = `
                     <div class="slot-item">
-                        <div class="slot-icon">⛏️</div>
+                        <div class="slot-icon">
+                            <img src="nui://inventory_images/images/${ore}.webp" alt="${ore}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
+                        </div>
                         <span class="slot-count">x${amount}</span>
                     </div>
                 `;
@@ -740,7 +790,9 @@
                 slot.classList.add('has-item');
                 slot.innerHTML = `
                     <div class="slot-item">
-                        <div class="slot-icon">🔧</div>
+                        <div class="slot-icon">
+                            <img src="nui://inventory_images/images/${item}.webp" alt="${item}" onerror="this.style.display='none'; this.parentElement.innerHTML='🔧'">
+                        </div>
                         <span class="slot-count">x${amount}</span>
                     </div>
                 `;

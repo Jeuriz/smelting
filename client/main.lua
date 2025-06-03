@@ -41,19 +41,12 @@ function CheckActiveProcess()
                 type = 'info'
             })
             
-            -- Mostrar progreso restante
+            -- Mostrar UI con progreso
             local remainingTime = status.remainingTime
             if remainingTime > 0 then
-                lib.progressBar({
-                    duration = remainingTime,
-                    label = 'Continuando fundición...',
-                    useWhileDead = false,
-                    canCancel = false,
-                    disable = {
-                        car = false,
-                        move = false,
-                        combat = false
-                    }
+                SendNUIMessage({
+                    action = "showProgress",
+                    totalTime = remainingTime
                 })
                 
                 -- Esperar a que termine y completar
@@ -138,13 +131,14 @@ function OpenSmeltingUI()
         return
     end
     
-    lib.callback('smelting:getPlayerItems', false, function(items, fuel)
+    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems)
         SetNuiFocus(true, true)
         isSmeltingOpen = true
         SendNUIMessage({
             action = "openSmelting",
             items = items,
             fuel = fuel,
+            outputItems = outputItems, -- Items ya procesados
             smeltingRules = Config.SmeltingRules
         })
     end)
@@ -185,42 +179,7 @@ RegisterNUICallback('startSmelting', function(data, cb)
             })
             CloseSmeltingUI()
             
-            -- Crear progbar con ox_lib
-            local progressSuccess = lib.progressBar({
-                duration = totalTime,
-                label = 'Fundiendo materiales... (Puedes desconectarte)',
-                useWhileDead = false,
-                canCancel = true,
-                disable = {
-                    car = false,
-                    move = false,
-                    combat = false
-                },
-                anim = {
-                    dict = 'mini@repair',
-                    clip = 'fixing_a_player'
-                }
-            })
-            
-            if progressSuccess then
-                -- Completado
-                TriggerServerEvent('smelting:completeProcess')
-                lib.notify({
-                    title = 'Fundición',
-                    description = Config.Texts['smelting_complete'],
-                    type = 'success'
-                })
-                activeProcess = false
-            else
-                -- Cancelado
-                TriggerServerEvent('smelting:cancelProcess')
-                lib.notify({
-                    title = 'Fundición',
-                    description = 'Proceso cancelado',
-                    type = 'error'
-                })
-                activeProcess = false
-            end
+            -- El progreso se maneja en la UI
         else
             lib.notify({
                 title = 'Fundición',
@@ -230,6 +189,47 @@ RegisterNUICallback('startSmelting', function(data, cb)
         end
     end, selectedItems, fuelAmount, fuelType)
     
+    cb('ok')
+end)
+
+-- Callbacks para Take Ore y Take All
+RegisterNUICallback('takeOre', function(data, cb)
+    lib.callback('smelting:takeOre', false, function(success, message)
+        if success then
+            lib.notify({
+                title = 'Fundición',
+                description = 'Has recogido los minerales procesados',
+                type = 'success'
+            })
+            CloseSmeltingUI()
+        else
+            lib.notify({
+                title = 'Fundición',
+                description = message or 'No hay minerales para recoger',
+                type = 'error'
+            })
+        end
+    end)
+    cb('ok')
+end)
+
+RegisterNUICallback('takeAll', function(data, cb)
+    lib.callback('smelting:takeAll', false, function(success, message)
+        if success then
+            lib.notify({
+                title = 'Fundición',
+                description = 'Has recogido todo el contenido',
+                type = 'success'
+            })
+            CloseSmeltingUI()
+        else
+            lib.notify({
+                title = 'Fundición',
+                description = message or 'No hay items para recoger',
+                type = 'error'
+            })
+        end
+    end)
     cb('ok')
 end)
 

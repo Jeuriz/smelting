@@ -597,7 +597,8 @@
             selectedFuel: null,
             selectedFuelAmount: 0,
             selectedOres: {},
-            currentOutput: {}
+            currentOutput: {},
+            outputItems: {} // Items ya procesados en el horno
         };
 
         // Sistema de tooltip mejorado
@@ -623,6 +624,7 @@
                 furnaceData.items = data.items || {};
                 furnaceData.fuel = data.fuel || {};
                 furnaceData.smeltingRules = data.smeltingRules || {};
+                furnaceData.outputItems = data.outputItems || {};
                 furnaceData.selectedOres = {};
                 furnaceData.currentOutput = {};
                 
@@ -630,12 +632,40 @@
                 document.getElementById('furnaceContainer').classList.add('show');
             } else if (data.action === 'closeSmelting') {
                 document.getElementById('furnaceContainer').classList.remove('show');
+            } else if (data.action === 'showProgress') {
+                showProgress(data.totalTime);
             }
         });
 
         function setupFurnaceUI() {
             setupOreSelection();
+            updateOutputItems();
             updateUI();
+        }
+
+        function updateOutputItems() {
+            const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            
+            // Mostrar items ya procesados
+            if (Object.keys(furnaceData.outputItems).length > 0) {
+                let slotIndex = 0;
+                for (const [item, amount] of Object.entries(furnaceData.outputItems)) {
+                    if (slotIndex >= 10) break;
+                    
+                    const slot = outputSlots[slotIndex];
+                    slot.classList.add('has-item');
+                    slot.innerHTML = `
+                        <div class="slot-item">
+                            <div class="slot-icon">
+                                <img src="nui://inventory_images/images/${item}.webp" alt="${item}" onerror="this.style.display='none'; this.parentElement.innerHTML='📦'">
+                            </div>
+                            <span class="slot-count">x${amount}</span>
+                        </div>
+                    `;
+                    
+                    slotIndex++;
+                }
+            }
         }
 
         function setupOreSelection() {

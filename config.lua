@@ -18,6 +18,12 @@ Config.SmeltingRules = {
         time = 5000, -- Tiempo en ms
         fuel_needed = 1 -- Combustible necesario por mineral
     },
+    ['mena_bauxite'] = {
+        result = 'mena_azufre',
+        amount = 2,
+        time = 4000,
+        fuel_needed = 1
+    },
 }
 
 -- Combustibles aceptados (en orden de eficiencia)

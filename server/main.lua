@@ -1,36 +1,10 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local smeltingProcesses = {}
+local furnaceStorage = {} -- Almacenamiento temporal de items en el horno
 
 -- Sistema de cache con ox_lib
 local itemsCache = {}
 local cacheTimeout = 5000 -- 5 segundos de cache
-
--- Sistema de persistencia de datos
-local function SaveSmeltingData()
-    local success, data = pcall(json.encode, smeltingProcesses)
-    if success and data then
-        SaveResourceFile(GetCurrentResourceName(), "data/smelting_processes.json", data, -1)
-    else
-        print("^1[Smelting]^7 Error al guardar datos de fundición")
-    end
-end
-
-local function LoadSmeltingData()
-    local data = LoadResourceFile(GetCurrentResourceName(), "data/smelting_processes.json")
-    if data and data ~= "" then
-        local success, decoded = pcall(json.decode, data)
-        if success and decoded and type(decoded) == "table" then
-            smeltingProcesses = decoded
-            print("^2[Smelting]^7 Datos de fundición cargados correctamente")
-        else
-            print("^1[Smelting]^7 Error al decodificar datos de fundición")
-            smeltingProcesses = {}
-        end
-    else
-        print("^3[Smelting]^7 No se encontraron datos previos de fundición")
-        smeltingProcesses = {}
-    end
-end
 
 -- Función auxiliar para obtener la cantidad de un item con cache
 local function GetItemCount(source, itemName)
@@ -94,7 +68,6 @@ end)
 -- Cargar datos al iniciar el recurso
 CreateThread(function()
     Wait(1000)
-    LoadSmeltingData()
     
     -- Verificar procesos activos y reanudarlos si es necesario
     for playerId, process in pairs(smeltingProcesses) do
@@ -133,89 +106,43 @@ function CompleteSmeltingProcess(playerId)
     
     local process = smeltingProcesses[playerIdStr]
     
-    -- Verificar si el jugador está conectado
-    local playerSource = tonumber(playerId)
-    local player = nil
-    
-    if playerSource then
-        player = QBCore.Functions.GetPlayer(playerSource)
-    end
-    
-    if player and process.results then
-        -- Dar items resultantes usando tgiann-inventory exports
+    if process and process.results then
+        -- Guardar items en el almacenamiento del horno
+        if not furnaceStorage[playerIdStr] then
+            furnaceStorage[playerIdStr] = {}
+        end
+        
         for item, amount in pairs(process.results) do
-            if item and amount and amount > 0 then
-                local success = exports['tgiann-inventory']:AddItem(playerSource, item, amount)
-                if success then
-                    TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, item, "add", amount)
-                end
+            if furnaceStorage[playerIdStr][item] then
+                furnaceStorage[playerIdStr][item] = furnaceStorage[playerIdStr][item] + amount
+            else
+                furnaceStorage[playerIdStr][item] = amount
             end
         end
         
-        TriggerClientEvent('smelting:notify', playerSource, Config.Texts['smelting_complete'] or 'Fundición completada', 'success')
-        TriggerClientEvent('smelting:processCompleted', playerSource)
+        -- Notificar si está conectado
+        local playerSource = tonumber(playerId)
+        if playerSource and QBCore.Functions.GetPlayer(playerSource) then
+            TriggerClientEvent('smelting:notify', playerSource, Config.Texts['smelting_complete'] or 'Fundición completada', 'success')
+            TriggerClientEvent('smelting:processCompleted', playerSource)
+        end
         
-        -- Limpiar proceso completado
+        -- Limpiar proceso
         smeltingProcesses[playerIdStr] = nil
-    else
-        -- Jugador desconectado, marcar items como pendientes
-        if process then
-            process.completed = true
-            process.active = false
-            process.completedTime = os.time()
-        end
-        print(string.format("^3[Smelting]^7 Proceso completado para jugador desconectado %s", playerIdStr))
     end
-    
-    SaveSmeltingData()
-end
-
--- Función para verificar procesos pendientes
-function CheckPendingProcesses(source)
-    if not source then return end
-    
-    local player = QBCore.Functions.GetPlayer(source)
-    if not player or not player.PlayerData or not player.PlayerData.citizenid then
-        return
-    end
-    
-    local citizenId = player.PlayerData.citizenid
-    
-    for playerId, process in pairs(smeltingProcesses) do
-        if process and process.citizenId == citizenId and process.completed and not process.delivered and process.results then
-            -- Entregar items pendientes
-            for item, amount in pairs(process.results) do
-                if item and amount and amount > 0 then
-                    local success = exports['tgiann-inventory']:AddItem(source, item, amount)
-                    if success then
-                        TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "add", amount)
-                    end
-                end
-            end
-            
-            TriggerClientEvent('smelting:notify', source, 'Proceso de fundición completado mientras estabas desconectado', 'success')
-            
-            -- Marcar como entregado
-            smeltingProcesses[playerId] = nil
-        end
-    end
-    SaveSmeltingData()
 end
 
 -- Callback con ox_lib para obtener items del jugador
 lib.callback.register('smelting:getPlayerItems', function(source)
     local items = {}
     local fuel = {}
+    local outputItems = {}
     
     if not source then
-        print("^1[Smelting Debug]^7 Source es nil")
-        return items, fuel
+        return items, fuel, outputItems
     end
     
-    print("^3[Smelting Debug]^7 Iniciando búsqueda de items para jugador: " .. tostring(source))
-    
-    -- Verificar si hay procesos pendientes al conectarse
-    CheckPendingProcesses(source)
+    local sourceStr = tostring(source)
     
     -- Obtener items fundibles
     if Config.SmeltingRules then
@@ -223,7 +150,6 @@ lib.callback.register('smelting:getPlayerItems', function(source)
             local count = GetItemCount(source, item)
             if count > 0 then
                 items[item] = count
-                print("^2[Smelting Debug]^7 Item " .. item .. " encontrado: " .. count)
             end
         end
     end
@@ -234,16 +160,16 @@ lib.callback.register('smelting:getPlayerItems', function(source)
             local count = GetItemCount(source, fuelItem)
             if count > 0 then
                 fuel[fuelItem] = count
-                print("^2[Smelting Debug]^7 Combustible " .. fuelItem .. " encontrado: " .. count)
             end
         end
     end
     
-    print("^3[Smelting Debug]^7 Resultado final:")
-    print("^3[Smelting Debug]^7 Items: " .. json.encode(items))
-    print("^3[Smelting Debug]^7 Fuel: " .. json.encode(fuel))
+    -- Obtener items ya procesados en el horno
+    if furnaceStorage[sourceStr] then
+        outputItems = furnaceStorage[sourceStr]
+    end
     
-    return items, fuel
+    return items, fuel, outputItems
 end)
 
 -- Callback con ox_lib para iniciar proceso
@@ -267,10 +193,8 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         return false, "Cantidad de combustible inválida"
     end
     
-    -- Verificar combustible usando la función auxiliar
+    -- Verificar combustible
     local fuelCount = GetItemCount(source, fuelType)
-    print("^3[Smelting Debug]^7 Verificando combustible " .. fuelType .. ": " .. fuelCount .. " disponible, " .. fuelAmount .. " requerido")
-    
     if fuelCount < fuelAmount then
         return false, Config.Texts['no_fuel'] or 'No tienes suficiente combustible'
     end
@@ -285,7 +209,6 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
             amount = tonumber(amount) or 0
             if amount > 0 then
                 local itemCount = GetItemCount(source, item)
-                print("^3[Smelting Debug]^7 Verificando material " .. item .. ": " .. itemCount .. " disponible, " .. amount .. " requerido")
                 
                 if itemCount < amount then
                     return false, Config.Texts['no_materials'] or 'No tienes los materiales necesarios'
@@ -312,21 +235,19 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         return false, Config.Texts['insufficient_fuel'] or 'Necesitas más combustible para este proceso'
     end
     
-    -- Limpiar cache de items para este jugador
+    -- Limpiar cache
     for key, _ in pairs(itemsCache) do
         if string.find(key, tostring(source) .. "_") then
             itemsCache[key] = nil
         end
     end
     
-    -- Remover items y combustible usando tgiann-inventory exports
+    -- Remover items y combustible
     for item, amount in pairs(selectedItems) do
         if item and amount and tonumber(amount) and tonumber(amount) > 0 then
             local removeSuccess = exports['tgiann-inventory']:RemoveItem(source, item, tonumber(amount))
             if removeSuccess then
                 TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "remove", tonumber(amount))
-            else
-                print("^1[Smelting Debug]^7 Error al remover " .. item .. " x" .. tonumber(amount))
             end
         end
     end
@@ -334,26 +255,18 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
     local fuelSuccess = exports['tgiann-inventory']:RemoveItem(source, fuelType, totalFuelNeeded)
     if fuelSuccess then
         TriggerClientEvent('tgiann-inventory:client:ItemBox', source, fuelType, "remove", totalFuelNeeded)
-    else
-        print("^1[Smelting Debug]^7 Error al remover combustible " .. fuelType .. " x" .. totalFuelNeeded)
     end
     
-    -- Guardar proceso con datos persistentes
+    -- Guardar proceso en memoria
     smeltingProcesses[tostring(source)] = {
         results = results,
         startTime = GetGameTimer(),
         totalTime = totalTime,
         citizenId = Player.PlayerData.citizenid,
-        active = true,
-        completed = false,
-        delivered = false,
-        timestamp = os.time()
+        active = true
     }
     
-    -- Guardar datos
-    SaveSmeltingData()
-    
-    -- Iniciar timer para completar automáticamente
+    -- Iniciar timer
     CreateThread(function()
         if totalTime and totalTime > 0 then
             Wait(totalTime)
@@ -362,6 +275,90 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
     end)
     
     return true, 'Proceso iniciado', totalTime
+end)
+
+-- Callback para tomar solo minerales procesados
+lib.callback.register('smelting:takeOre', function(source)
+    if not source then
+        return false, "Error del sistema"
+    end
+    
+    local Player = QBCore.Functions.GetPlayer(source)
+    if not Player then
+        return false, "Error del jugador"
+    end
+    
+    local sourceStr = tostring(source)
+    
+    if not furnaceStorage[sourceStr] or next(furnaceStorage[sourceStr]) == nil then
+        return false, "No hay minerales procesados para recoger"
+    end
+    
+    -- Dar solo los minerales procesados (no combustibles)
+    local given = false
+    for item, amount in pairs(furnaceStorage[sourceStr]) do
+        -- Verificar que no sea combustible
+        local isFuel = false
+        for _, fuelItem in pairs(Config.FuelItems) do
+            if item == fuelItem then
+                isFuel = true
+                break
+            end
+        end
+        
+        if not isFuel and amount > 0 then
+            local success = exports['tgiann-inventory']:AddItem(source, item, amount)
+            if success then
+                TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "add", amount)
+                furnaceStorage[sourceStr][item] = nil
+                given = true
+            end
+        end
+    end
+    
+    -- Limpiar items vacíos
+    for item, amount in pairs(furnaceStorage[sourceStr]) do
+        if not amount or amount <= 0 then
+            furnaceStorage[sourceStr][item] = nil
+        end
+    end
+    
+    return given, given and "Minerales recogidos" or "No se pudieron recoger los minerales"
+end)
+
+-- Callback para tomar todo
+lib.callback.register('smelting:takeAll', function(source)
+    if not source then
+        return false, "Error del sistema"
+    end
+    
+    local Player = QBCore.Functions.GetPlayer(source)
+    if not Player then
+        return false, "Error del jugador"
+    end
+    
+    local sourceStr = tostring(source)
+    
+    if not furnaceStorage[sourceStr] or next(furnaceStorage[sourceStr]) == nil then
+        return false, "No hay items para recoger"
+    end
+    
+    -- Dar todos los items
+    local given = false
+    for item, amount in pairs(furnaceStorage[sourceStr]) do
+        if amount > 0 then
+            local success = exports['tgiann-inventory']:AddItem(source, item, amount)
+            if success then
+                TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "add", amount)
+                given = true
+            end
+        end
+    end
+    
+    -- Limpiar almacenamiento
+    furnaceStorage[sourceStr] = {}
+    
+    return given, given and "Todos los items recogidos" or "No se pudieron recoger los items"
 end)
 
 -- Callback con ox_lib para obtener estado del proceso
@@ -403,57 +400,16 @@ RegisterNetEvent('smelting:cancelProcess', function()
     local sourceStr = tostring(source)
     
     if smeltingProcesses[sourceStr] and Player then
-        local process = smeltingProcesses[sourceStr]
-        
-        -- Devolver materiales si el proceso se cancela
-        if process and process.active and not process.completed then
-            -- Aquí podrías implementar lógica para devolver algunos materiales
-            -- Por ejemplo, devolver el 50% de los materiales
-        end
-        
         smeltingProcesses[sourceStr] = nil
-        SaveSmeltingData()
     end
 end)
 
--- Limpiar procesos antiguos periódicamente
-CreateThread(function()
-    while true do
-        Wait(300000) -- Cada 5 minutos
-        
-        local currentTime = os.time()
-        local toRemove = {}
-        
-        for playerId, process in pairs(smeltingProcesses) do
-            if process then
-                -- Remover procesos completados y entregados después de 24 horas
-                if process.completed and process.delivered and 
-                   process.completedTime and (currentTime - process.completedTime) > 86400 then
-                    table.insert(toRemove, playerId)
-                end
-                
-                -- Remover procesos muy antiguos (más de 7 días)
-                if process.timestamp and (currentTime - process.timestamp) > 604800 then
-                    table.insert(toRemove, playerId)
-                end
-            end
-        end
-        
-        if #toRemove > 0 then
-            for _, playerId in pairs(toRemove) do
-                smeltingProcesses[playerId] = nil
-            end
-            SaveSmeltingData()
-            print(string.format("^3[Smelting]^7 Limpiados %d procesos antiguos", #toRemove))
-        end
-    end
-end)
-
--- Guardar datos cuando el recurso se detiene
-AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName == GetCurrentResourceName() then
-        SaveSmeltingData()
-        print("^2[Smelting]^7 Datos guardados al detener el recurso")
+-- Limpiar datos al desconectar
+AddEventHandler('playerDropped', function(reason)
+    local source = source
+    if source then
+        local sourceStr = tostring(source)
+        -- Mantener el almacenamiento del horno pero limpiar procesos activos después de completarse
     end
 end)
 
@@ -475,6 +431,15 @@ lib.addCommand('smeltdebug', {
         for _, fuel in pairs(Config.FuelItems) do
             local count = GetItemCount(source, fuel)
             print("^2[Smelting Debug]^7 " .. fuel .. ": " .. count)
+        end
+        
+        -- Verificar almacenamiento del horno
+        local sourceStr = tostring(source)
+        if furnaceStorage[sourceStr] then
+            print("^3[Smelting Debug]^7 === ALMACENAMIENTO DEL HORNO ===")
+            for item, amount in pairs(furnaceStorage[sourceStr]) do
+                print("^2[Smelting Debug]^7 " .. item .. ": " .. amount)
+            end
         end
         
         TriggerClientEvent('smelting:notify', source, 'Revisa la consola del servidor para ver el debug', 'info')

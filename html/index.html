@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Fundición</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: transparent;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: block;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            max-height: 600px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .content {
+            padding: 30px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ff6b35;
+            border-bottom: 2px solid #ff6b35;
+            padding-bottom: 5px;
+        }
+
+        .fuel-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .fuel-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .fuel-group label {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        select, input[type="number"] {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .item-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.2);
+            border-color: #ff6b35;
+        }
+
+        .item-card.selected {
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .item-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #fff;
+            text-transform: capitalize;
+        }
+
+        .item-info {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .item-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quantity-input {
+            width: 60px;
+            padding: 5px;
+            font-size: 12px;
+            min-width: unset;
+        }
+
+        .available-qty {
+            font-size: 12px;
+            color: #ff6b35;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .summary-item:last-child {
+            margin-bottom: 0;
+            font-weight: bold;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            padding-top: 8px;
+        }
+
+        .smelt-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border: none;
+            color: #fff;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .smelt-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .smelt-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .no-items {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 30px;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ff6b35;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f7931e;
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .container.show {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="smeltingContainer">
+        <div class="header">
+            <h1>🔥 Sistema de Fundición</h1>
+            <button class="close-btn" onclick="closeSmelting()">✕</button>
+        </div>
+        
+        <div class="content">
+            <!-- Sección de Combustible -->
+            <div class="section">
+                <div class="section-title">⛽ Combustible</div>
+                <div class="fuel-section">
+                    <div class="fuel-group">
+                        <label>Tipo de Combustible:</label>
+                        <select id="fuelType">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div class="fuel-group">
+                        <label>Cantidad:</label>
+                        <input type="number" id="fuelAmount" min="1" max="999" value="1">
+                    </div>
+                    <div class="fuel-group">
+                        <label>Disponible:</label>
+                        <span id="availableFuel" class="available-qty">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Materiales -->
+            <div class="section">
+                <div class="section-title">⛏️ Materiales para Fundir</div>
+                <div class="items-grid" id="itemsGrid">
+                    <div class="no-items">No tienes materiales para fundir</div>
+                </div>
+            </div>
+
+            <!-- Resumen -->
+            <div class="summary" id="summary" style="display: none;">
+                <div class="section-title" style="color: #fff; border-color: #fff;">📊 Resumen del Proceso</div>
+                <div id="summaryContent"></div>
+            </div>
+
+            <!-- Botón de Fundición -->
+            <button class="smelt-btn" id="smeltBtn" onclick="startSmelting()" disabled>
+                🔥 Comenzar Fundición
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {
+            items: {},
+            fuel: {},
+            smeltingRules: {},
+            selectedItems: {}
+        };
+
+        // Listener para mensajes desde el cliente
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            
+            if (data.action === 'openSmelting') {
+                currentData.items = data.items || {};
+                currentData.fuel = data.fuel || {};
+                currentData.smeltingRules = data.smeltingRules || {};
+                currentData.selectedItems = {};
+                
+                setupUI();
+                document.getElementById('smeltingContainer').classList.add('show');
+            } else if (data.action === 'closeSmelting') {
+                document.getElementById('smeltingContainer').classList.remove('show');
+            }
+        });
+
+        function setupUI() {
+            setupFuelSection();
+            setupItemsSection();
+            updateSummary();
+        }
+
+        function setupFuelSection() {
+            const fuelSelect = document.getElementById('fuelType');
+            const fuelAmount = document.getElementById('fuelAmount');
+            const availableFuel = document.getElementById('availableFuel');
+            
+            // Limpiar opciones anteriores
+            fuelSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            // Agregar combustibles disponibles
+            for (const [fuelType, amount] of Object.entries(currentData.fuel)) {
+                const option = document.createElement('option');
+                option.value = fuelType;
+                option.textContent = capitalizeFirst(fuelType.replace('_', ' '));
+                fuelSelect.appendChild(option);
+            }
+            
+            // Event listeners
+            fuelSelect.addEventListener('change', function() {
+                const selectedFuel = this.value;
+                if (selectedFuel && currentData.fuel[selectedFuel]) {
+                    availableFuel.textContent = currentData.fuel[selectedFuel];
+                    fuelAmount.max = currentData.fuel[selectedFuel];
+                } else {
+                    availableFuel.textContent = '0';
+                    fuelAmount.max = '0';
+                }
+                updateSummary();
+            });
+            
+            fuelAmount.addEventListener('input', updateSummary);
+        }
+
+        function setupItemsSection() {
+            const itemsGrid = document.getElementById('itemsGrid');
+            
+            if (Object.keys(currentData.items).length === 0) {
+                itemsGrid.innerHTML = '<div class="no-items">No tienes materiales para fundir</div>';
+                return;
+            }
+            
+            itemsGrid.innerHTML = '';
+            
+            for (const [itemName, available] of Object.entries(currentData.items)) {
+                const rule = currentData.smeltingRules[itemName];
+                if (!rule) continue;
+                
+                const itemCard = createItemCard(itemName, available, rule);
+                itemsGrid.appendChild(itemCard);
+            }
+        }
+
+        function createItemCard(itemName, available, rule) {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.onclick = () => toggleItemSelection(itemName, card);
+            
+            card.innerHTML = `
+                <div class="item-name">${capitalizeFirst(itemName.replace('_', ' '))}</div>
+                <div class="item-info">
+                    Resultado: ${capitalizeFirst(rule.result.replace('_', ' '))} x${rule.amount}<br>
+                    Tiempo: ${rule.time / 1000}s | Combustible: ${rule.fuel_needed}
+                </div>
+                <div class="item-controls">
+                    <input type="number" class="quantity-input" min="1" max="${available}" value="1" 
+                           onclick="event.stopPropagation()" onchange="updateItemQuantity('${itemName}', this.value)">
+                    <span class="available-qty">/${available}</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function toggleItemSelection(itemName, cardElement) {
+            const quantityInput = cardElement.querySelector('.quantity-input');
+            const quantity = parseInt(quantityInput.value) || 1;
+            
+            if (currentData.selectedItems[itemName]) {
+                // Deseleccionar
+                delete currentData.selectedItems[itemName];
+                cardElement.classList.remove('selected');
+            } else {
+                // Seleccionar
+                currentData.selectedItems[itemName] = quantity;
+                cardElement.classList.add('selected');
+            }
+            
+            updateSummary();
+        }
+
+        function updateItemQuantity(itemName, quantity) {
+            quantity = parseInt(quantity) || 1;
+            if (currentData.selectedItems[itemName]) {
+                currentData.selectedItems[itemName] = quantity;
+                updateSummary();
+            }
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const summaryContent = document.getElementById('summaryContent');
+            const smeltBtn = document.getElementById('smeltBtn');
+            
+            const selectedCount = Object.keys(currentData.selectedItems).length;
+            const fuelType = document.getElementById('fuelType').value;
+            const fuelAmount = parseInt(document.getElementById('fuelAmount').value) || 0;
+            
+            if (selectedCount === 0 || !fuelType || fuelAmount === 0) {
+                summary.style.display = 'none';
+                smeltBtn.disabled = true;
+                return;
+            }
+            
+            // Calcular totales
+            let totalTime = 0;
+            let totalFuelNeeded = 0;
+            let results = {};
+            
+            for (const [itemName, quantity] of Object.entries(currentData.selectedItems)) {
+                const rule = currentData.smeltingRules[itemName];
+                if (!rule) continue;
+                
+                totalTime += rule.time * quantity;
+                totalFuelNeeded += rule.fuel_needed * quantity;
+                
+                const resultAmount = rule.amount * quantity;
+                if (results[rule.result]) {
+                    results[rule.result] += resultAmount;
+                } else {
+                    results[rule.result] = resultAmount;
+                }
+            }
+            
+            // Generar contenido del resumen
+            let summaryHTML = '';
+            
+            // Mostrar resultados
+            for (const [result, amount] of Object.entries(results)) {
+                summaryHTML += `
+                    <div class="summary-item">
+                        <span>Obtendrás:</span>
+                        <span>${capitalizeFirst(result.replace('_', ' '))} x${amount}</span>
+                    </div>
+                `;
+            }
+            
+            summaryHTML += `
+                <div class="summary-item">
+                    <span>Tiempo total:</span>
+                    <span>${(totalTime / 1000).toFixed(1)}s</span>
+                </div>
+                <div class="summary-item">
+                    <span>Combustible necesario:</span>
+                    <span>${totalFuelNeeded} ${capitalizeFirst(fuelType.replace('_', ' '))}</span>
+                </div>
+            `;
+            
+            summaryContent.innerHTML = summaryHTML;
+            summary.style.display = 'block';
+            
+            // Verificar si se puede realizar la fundición
+            const canSmelt = fuelAmount >= totalFuelNeeded && totalFuelNeeded > 0;
+            smeltBtn.disabled = !canSmelt;
+            
+            if (!canSmelt && totalFuelNeeded > 0) {
+                smeltBtn.textContent = `Necesitas ${totalFuelNeeded - fuelAmount} más combustible`;
+            } else {
+                smeltBtn.textContent = '🔥 Comenzar Fundición';
+            }
+        }
+
+        function startSmelting() {
+            const fuelType = document.getElementById('fuelType').value;
+            const fuelAmount = parseInt(document.getElementById('fuelAmount').value) || 0;
+            
+            if (!fuelType || fuelAmount === 0 || Object.keys(currentData.selectedItems).length === 0) {
+                return;
+            }
+            
+            // Calcular tiempo total
+            let totalTime = 0;
+            for (const [itemName, quantity] of Object.entries(currentData.selectedItems)) {
+                const rule = currentData.smeltingRules[itemName];
+                if (rule) {
+                    totalTime += rule.time * quantity;
+                }
+            }
+            
+            // Enviar datos al cliente
+            fetch(`https://${GetParentResourceName()}/startSmelting`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({
+                    selectedItems: currentData.selectedItems,
+                    fuelAmount: fuelAmount,
+                    fuelType: fuelType,
+                    totalTime: totalTime
+                })
+            });
+        }
+
+        function closeSmelting() {
+            fetch(`https://${GetParentResourceName()}/closeSmelting`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({})
+            });
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // Cerrar con ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeSmelting();
+            }
+        });
+
+        // Datos de ejemplo para visualización
+        window.addEventListener('load', function() {
+            // Simular datos para visualización
+            currentData = {
+                items: {
+                    'iron_ore': 25,
+                    'copper_ore': 18,
+                    'gold_ore': 7,
+                    'diamond_ore': 3
+                },
+                fuel: {
+                    'coal': 15,
+                    'wood': 32,
+                    'gasoline': 8
+                },
+                smeltingRules: {
+                    'iron_ore': {
+                        result: 'iron',
+                        amount: 2,
+                        time: 5000,
+                        fuel_needed: 1
+                    },
+                    'copper_ore': {
+                        result: 'copper', 
+                        amount: 2,
+                        time: 4000,
+                        fuel_needed: 1
+                    },
+                    'gold_ore': {
+                        result: 'gold',
+                        amount: 1,
+                        time: 8000,
+                        fuel_needed: 2
+                    },
+                    'diamond_ore': {
+                        result: 'diamond',
+                        amount: 1,
+                        time: 10000,
+                        fuel_needed: 3
+                    }
+                },
+                selectedItems: {}
+            };
+            
+            setupUI();
+        });
+    </script>
+</body>
+</html>

@@ -2,6 +2,13 @@ local QBCore = exports['qb-core']:GetCoreObject()
 local isSmeltingOpen = false
 local activeProcess = false
 
+-- Cache de ox_lib
+local cache = {
+    ped = cache.ped,
+    coords = cache.coords,
+    vehicle = cache.vehicle
+}
+
 -- Función para crear blips
 CreateThread(function()
     for k, v in pairs(Config.SmeltingLocations) do
@@ -25,26 +32,39 @@ end)
 
 -- Función para verificar si hay un proceso activo
 function CheckActiveProcess()
-    QBCore.Functions.TriggerCallback('smelting:getProcessStatus', function(status)
+    lib.callback('smelting:getProcessStatus', false, function(status)
         if status.active then
             activeProcess = true
-            QBCore.Functions.Notify('Tienes un proceso de fundición en curso', 'info')
+            lib.notify({
+                title = 'Fundición',
+                description = 'Tienes un proceso de fundición en curso',
+                type = 'info'
+            })
             
             -- Mostrar progreso restante
             local remainingTime = status.remainingTime
             if remainingTime > 0 then
-                QBCore.Functions.Progressbar("smelting_process_resume", "Continuando fundición...", remainingTime, false, true, {
-                    disableMovement = false,
-                    disableCarMovement = false,
-                    disableMouse = false,
-                    disableCombat = false,
-                }, {}, {}, {}, function() -- Done
+                lib.progressBar({
+                    duration = remainingTime,
+                    label = 'Continuando fundición...',
+                    useWhileDead = false,
+                    canCancel = false,
+                    disable = {
+                        car = false,
+                        move = false,
+                        combat = false
+                    }
+                })
+                
+                -- Esperar a que termine y completar
+                SetTimeout(remainingTime, function()
                     TriggerServerEvent('smelting:completeProcess')
-                    QBCore.Functions.Notify(Config.Texts['smelting_complete'], 'success')
+                    lib.notify({
+                        title = 'Fundición',
+                        description = Config.Texts['smelting_complete'],
+                        type = 'success'
+                    })
                     activeProcess = false
-                end, function() -- Cancel
-                    -- No permitir cancelar procesos reanudados
-                    QBCore.Functions.Notify('No puedes cancelar un proceso reanudado', 'error')
                 end)
             else
                 -- El proceso ya debería estar completo
@@ -55,45 +75,70 @@ function CheckActiveProcess()
     end)
 end
 
--- Función principal para manejar las ubicaciones
+-- Función principal para manejar las ubicaciones con ox_lib
 CreateThread(function()
-    while true do
-        local wait = 1000
-        local ped = PlayerPedId()
-        local pos = GetEntityCoords(ped)
-        
-        for k, v in pairs(Config.SmeltingLocations) do
-            local dist = #(pos - vector3(v.x, v.y, v.z))
-            
-            if dist < Config.SmeltingDistance then
-                wait = 0
-                
-                if activeProcess then
-                    QBCore.Functions.DrawText3D(v.x, v.y, v.z + 1, '[E] Verificar Proceso')
-                    if IsControlJustPressed(0, 38) then -- E key
+    -- Crear puntos de interacción con ox_lib
+    for k, v in pairs(Config.SmeltingLocations) do
+        local point = lib.points.new({
+            coords = vector3(v.x, v.y, v.z),
+            distance = Config.SmeltingDistance,
+            duiId = 'smelting_' .. k,
+        })
+
+        function point:onEnter()
+            if activeProcess then
+                lib.showTextUI('[E] Verificar Proceso', {
+                    position = "top-center",
+                    icon = 'fire',
+                    style = {
+                        borderRadius = 4,
+                        backgroundColor = '#ff6b35',
+                        color = 'white'
+                    }
+                })
+            else
+                lib.showTextUI(Config.Texts['open_smelting'], {
+                    position = "top-center",
+                    icon = 'fire',
+                    style = {
+                        borderRadius = 4,
+                        backgroundColor = '#ff6b35',
+                        color = 'white'
+                    }
+                })
+            end
+        end
+
+        function point:onExit()
+            lib.hideTextUI()
+        end
+
+        function point:nearby()
+            if self.currentDistance < 2.0 then
+                if IsControlJustPressed(0, 38) then -- E key
+                    if activeProcess then
                         CheckActiveProcess()
-                    end
-                else
-                    QBCore.Functions.DrawText3D(v.x, v.y, v.z + 1, Config.Texts['open_smelting'])
-                    if IsControlJustPressed(0, 38) and not isSmeltingOpen then -- E key
+                    elseif not isSmeltingOpen then
                         OpenSmeltingUI()
                     end
                 end
             end
         end
-        
-        Wait(wait)
     end
 end)
 
 -- Función para abrir la UI
 function OpenSmeltingUI()
     if activeProcess then
-        QBCore.Functions.Notify('Ya tienes un proceso de fundición activo', 'error')
+        lib.notify({
+            title = 'Fundición',
+            description = 'Ya tienes un proceso de fundición activo',
+            type = 'error'
+        })
         return
     end
     
-    QBCore.Functions.TriggerCallback('smelting:getPlayerItems', function(items, fuel)
+    lib.callback('smelting:getPlayerItems', false, function(items, fuel)
         SetNuiFocus(true, true)
         isSmeltingOpen = true
         SendNUIMessage({
@@ -130,33 +175,58 @@ RegisterNUICallback('startSmelting', function(data, cb)
     local fuelAmount = data.fuelAmount
     local fuelType = data.fuelType
     
-    QBCore.Functions.TriggerCallback('smelting:startProcess', function(success, message)
+    lib.callback('smelting:startProcess', false, function(success, message, totalTime)
         if success then
             activeProcess = true
-            QBCore.Functions.Notify(Config.Texts['smelting_started'], 'success')
+            lib.notify({
+                title = 'Fundición',
+                description = Config.Texts['smelting_started'],
+                type = 'success'
+            })
             CloseSmeltingUI()
             
-            -- Crear progbar con opción de salir (el proceso continuará en background)
-            QBCore.Functions.Progressbar("smelting_process", "Fundiendo materiales... (Puedes desconectarte)", data.totalTime, false, false, {
-                disableMovement = false,
-                disableCarMovement = false,
-                disableMouse = false,
-                disableCombat = false,
-            }, {
-                animDict = "mini@repair",
-                anim = "fixing_a_player",
-            }, {}, {}, function() -- Done
+            -- Crear progbar con ox_lib
+            local progressSuccess = lib.progressBar({
+                duration = totalTime,
+                label = 'Fundiendo materiales... (Puedes desconectarte)',
+                useWhileDead = false,
+                canCancel = true,
+                disable = {
+                    car = false,
+                    move = false,
+                    combat = false
+                },
+                anim = {
+                    dict = 'mini@repair',
+                    clip = 'fixing_a_player'
+                }
+            })
+            
+            if progressSuccess then
+                -- Completado
                 TriggerServerEvent('smelting:completeProcess')
-                QBCore.Functions.Notify(Config.Texts['smelting_complete'], 'success')
+                lib.notify({
+                    title = 'Fundición',
+                    description = Config.Texts['smelting_complete'],
+                    type = 'success'
+                })
                 activeProcess = false
-            end, function() -- Cancel
-                -- Permitir cancelar solo si no ha pasado mucho tiempo
+            else
+                -- Cancelado
                 TriggerServerEvent('smelting:cancelProcess')
-                QBCore.Functions.Notify('Proceso cancelado', 'error')
+                lib.notify({
+                    title = 'Fundición',
+                    description = 'Proceso cancelado',
+                    type = 'error'
+                })
                 activeProcess = false
-            end)
+            end
         else
-            QBCore.Functions.Notify(message, 'error')
+            lib.notify({
+                title = 'Fundición',
+                description = message,
+                type = 'error'
+            })
         end
     end, selectedItems, fuelAmount, fuelType)
     
@@ -165,18 +235,39 @@ end)
 
 -- Event handlers
 RegisterNetEvent('smelting:notify', function(message, type)
-    QBCore.Functions.Notify(message, type)
+    lib.notify({
+        title = 'Fundición',
+        description = message,
+        type = type
+    })
 end)
 
 RegisterNetEvent('smelting:processCompleted', function()
     activeProcess = false
 end)
 
--- Comando para verificar proceso (opcional)
-RegisterCommand('checksmelt', function()
+-- Comando para verificar proceso con ox_lib
+lib.addCommand('checksmelt', {
+    help = 'Verificar proceso de fundición activo',
+    restricted = false
+}, function(source, args, raw)
     if activeProcess then
         CheckActiveProcess()
     else
-        QBCore.Functions.Notify('No tienes procesos activos', 'info')
+        lib.notify({
+            title = 'Fundición',
+            description = 'No tienes procesos activos',
+            type = 'info'
+        })
+    end
+end)
+
+-- Limpiar al descargar el recurso
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName == GetCurrentResourceName() then
+        lib.hideTextUI()
+        if isSmeltingOpen then
+            CloseSmeltingUI()
+        end
     end
 end)

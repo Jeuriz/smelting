@@ -105,29 +105,113 @@ function CompleteSmeltingProcess(playerId)
     end
     
     local process = smeltingProcesses[playerIdStr]
+    local playerSource = tonumber(playerId)
     
-    if process and process.results then
-        -- Guardar items en el almacenamiento del horno
-        if not furnaceStorage[playerIdStr] then
-            furnaceStorage[playerIdStr] = {}
-        end
+    -- Verificar si el jugador está conectado
+    if playerSource then
+        local Player = QBCore.Functions.GetPlayer(playerSource)
         
-        for item, amount in pairs(process.results) do
-            if furnaceStorage[playerIdStr][item] then
-                furnaceStorage[playerIdStr][item] = furnaceStorage[playerIdStr][item] + amount
-            else
-                furnaceStorage[playerIdStr][item] = amount
+        if Player and process.results and process.itemsToProcess then
+            -- VERIFICAR NUEVAMENTE que el jugador tenga los items antes de procesarlos
+            local hasAllItems = true
+            local missingItems = {}
+            
+            -- Limpiar cache antes de verificar
+            for key, _ in pairs(itemsCache) do
+                if string.find(key, tostring(playerSource) .. "_") then
+                    itemsCache[key] = nil
+                end
             end
-        end
-        
-        -- Notificar si está conectado
-        local playerSource = tonumber(playerId)
-        if playerSource and QBCore.Functions.GetPlayer(playerSource) then
+            
+            -- Verificar cada item
+            for item, amount in pairs(process.itemsToProcess) do
+                local currentCount = GetItemCount(playerSource, item)
+                if currentCount < amount then
+                    hasAllItems = false
+                    missingItems[item] = amount - currentCount
+                end
+            end
+            
+            -- Verificar combustible
+            local fuelCount = GetItemCount(playerSource, process.fuelType)
+            if fuelCount < process.fuelNeeded then
+                hasAllItems = false
+                TriggerClientEvent('smelting:notify', playerSource, 'No tienes suficiente combustible para completar el proceso', 'error')
+                smeltingProcesses[playerIdStr] = nil
+                return
+            end
+            
+            if not hasAllItems then
+                -- El jugador no tiene los items necesarios (posible intento de abuso)
+                local missingText = "Faltan items: "
+                for item, amount in pairs(missingItems) do
+                    missingText = missingText .. item .. " x" .. amount .. ", "
+                end
+                
+                TriggerClientEvent('smelting:notify', playerSource, 'Proceso cancelado. ' .. missingText, 'error')
+                TriggerClientEvent('smelting:processCompleted', playerSource)
+                
+                -- Log para administradores
+                print(string.format("^1[Smelting Anti-Abuse]^7 Jugador %s (%s) intentó completar proceso sin items necesarios", 
+                    Player.PlayerData.name, Player.PlayerData.citizenid))
+                
+                -- Limpiar proceso
+                smeltingProcesses[playerIdStr] = nil
+                return
+            end
+            
+            -- Si tiene todos los items, proceder a removerlos
+            local allRemoved = true
+            
+            -- Remover items
+            for item, amount in pairs(process.itemsToProcess) do
+                local removeSuccess = exports['tgiann-inventory']:RemoveItem(playerSource, item, amount)
+                if removeSuccess then
+                    TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, item, "remove", amount)
+                else
+                    allRemoved = false
+                    print(string.format("^1[Smelting]^7 Error al remover %s x%d del jugador %s", item, amount, playerSource))
+                end
+            end
+            
+            -- Remover combustible
+            local fuelSuccess = exports['tgiann-inventory']:RemoveItem(playerSource, process.fuelType, process.fuelNeeded)
+            if fuelSuccess then
+                TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, process.fuelType, "remove", process.fuelNeeded)
+            else
+                allRemoved = false
+            end
+            
+            if not allRemoved then
+                TriggerClientEvent('smelting:notify', playerSource, 'Error al procesar algunos items', 'error')
+                smeltingProcesses[playerIdStr] = nil
+                return
+            end
+            
+            -- Guardar items en el almacenamiento del horno
+            if not furnaceStorage[playerIdStr] then
+                furnaceStorage[playerIdStr] = {}
+            end
+            
+            for item, amount in pairs(process.results) do
+                if furnaceStorage[playerIdStr][item] then
+                    furnaceStorage[playerIdStr][item] = furnaceStorage[playerIdStr][item] + amount
+                else
+                    furnaceStorage[playerIdStr][item] = amount
+                end
+            end
+            
             TriggerClientEvent('smelting:notify', playerSource, Config.Texts['smelting_complete'] or 'Fundición completada', 'success')
             TriggerClientEvent('smelting:processCompleted', playerSource)
+        else
+            -- Jugador desconectado, cancelar proceso sin dar items
+            print(string.format("^3[Smelting]^7 Proceso cancelado para jugador desconectado %s", playerIdStr))
         end
         
         -- Limpiar proceso
+        smeltingProcesses[playerIdStr] = nil
+    else
+        -- Jugador no está conectado, limpiar proceso
         smeltingProcesses[playerIdStr] = nil
     end
 end
@@ -183,6 +267,11 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         return false, "Error del jugador"
     end
     
+    -- Verificar si ya tiene un proceso activo
+    if smeltingProcesses[tostring(source)] and smeltingProcesses[tostring(source)].active then
+        return false, "Ya tienes un proceso de fundición activo"
+    end
+    
     -- Validar parámetros
     if not selectedItems or not fuelAmount or not fuelType then
         return false, "Parámetros inválidos"
@@ -203,6 +292,7 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
     local totalTime = 0
     local results = {}
     local totalFuelNeeded = 0
+    local itemsToProcess = {} -- Guardar items para verificar al final
     
     for item, amount in pairs(selectedItems) do
         if item and amount and Config.SmeltingRules and Config.SmeltingRules[item] then
@@ -225,6 +315,9 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
                     else
                         results[rule.result] = resultAmount
                     end
+                    
+                    -- Guardar para verificar al final
+                    itemsToProcess[item] = amount
                 end
             end
         end
@@ -235,36 +328,21 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         return false, Config.Texts['insufficient_fuel'] or 'Necesitas más combustible para este proceso'
     end
     
-    -- Limpiar cache
-    for key, _ in pairs(itemsCache) do
-        if string.find(key, tostring(source) .. "_") then
-            itemsCache[key] = nil
-        end
-    end
-    
-    -- Remover items y combustible
-    for item, amount in pairs(selectedItems) do
-        if item and amount and tonumber(amount) and tonumber(amount) > 0 then
-            local removeSuccess = exports['tgiann-inventory']:RemoveItem(source, item, tonumber(amount))
-            if removeSuccess then
-                TriggerClientEvent('tgiann-inventory:client:ItemBox', source, item, "remove", tonumber(amount))
-            end
-        end
-    end
-    
-    local fuelSuccess = exports['tgiann-inventory']:RemoveItem(source, fuelType, totalFuelNeeded)
-    if fuelSuccess then
-        TriggerClientEvent('tgiann-inventory:client:ItemBox', source, fuelType, "remove", totalFuelNeeded)
-    end
-    
-    -- Guardar proceso en memoria
+    -- Guardar proceso en memoria SIN REMOVER ITEMS AÚN
     smeltingProcesses[tostring(source)] = {
         results = results,
         startTime = GetGameTimer(),
         totalTime = totalTime,
         citizenId = Player.PlayerData.citizenid,
-        active = true
+        active = true,
+        itemsToProcess = itemsToProcess, -- Items a procesar
+        fuelType = fuelType,
+        fuelNeeded = totalFuelNeeded
     }
+    
+    -- Log de inicio de proceso
+    print(string.format("^2[Smelting]^7 Jugador %s (%s) inició proceso de fundición", 
+        Player.PlayerData.name, Player.PlayerData.citizenid))
     
     -- Iniciar timer
     CreateThread(function()
@@ -400,6 +478,8 @@ RegisterNetEvent('smelting:cancelProcess', function()
     local sourceStr = tostring(source)
     
     if smeltingProcesses[sourceStr] and Player then
+        -- No devolver nada ya que no se removieron items al inicio
+        TriggerClientEvent('smelting:notify', source, 'Proceso de fundición cancelado', 'info')
         smeltingProcesses[sourceStr] = nil
     end
 end)

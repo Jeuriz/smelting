@@ -19,7 +19,7 @@
         }
 
         .container {
-            display: block;
+            display: none; /* HIDDEN BY DEFAULT */
             position: fixed;
             top: 50%;
             left: 50%;
@@ -575,52 +575,8 @@
             }
         });
 
-        // Datos de ejemplo para visualización
-        window.addEventListener('load', function() {
-            // Simular datos para visualización
-            currentData = {
-                items: {
-                    'iron_ore': 25,
-                    'copper_ore': 18,
-                    'gold_ore': 7,
-                    'diamond_ore': 3
-                },
-                fuel: {
-                    'coal': 15,
-                    'wood': 32,
-                    'gasoline': 8
-                },
-                smeltingRules: {
-                    'iron_ore': {
-                        result: 'iron',
-                        amount: 2,
-                        time: 5000,
-                        fuel_needed: 1
-                    },
-                    'copper_ore': {
-                        result: 'copper', 
-                        amount: 2,
-                        time: 4000,
-                        fuel_needed: 1
-                    },
-                    'gold_ore': {
-                        result: 'gold',
-                        amount: 1,
-                        time: 8000,
-                        fuel_needed: 2
-                    },
-                    'diamond_ore': {
-                        result: 'diamond',
-                        amount: 1,
-                        time: 10000,
-                        fuel_needed: 3
-                    }
-                },
-                selectedItems: {}
-            };
-            
-            setupUI();
-        });
+        // REMOVED THE AUTO-LOAD DEMO DATA SECTION
+        // The UI will now only show when triggered by the client script
     </script>
 </body>
 </html>

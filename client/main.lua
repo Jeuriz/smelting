@@ -36,12 +36,14 @@ CreateThread(function()
             coords = vector3(v.x, v.y, v.z),
             size = vector3(2.0, 2.0, 2.0),
             rotation = 0,
-            debug = false,
+           
+            debug = true,
             options = {
                 {
                     name = 'smelting_furnace_' .. k,
                     icon = 'fas fa-fire',
                     label = 'Use Large Furnace',
+                    distance = 1,
                     canInteract = function()
                         return not progressActive
                     end,
@@ -111,7 +113,7 @@ function StartWorkingAnimation()
     local ped = PlayerPedId()
     
     -- Cargar animación
-    local animDict = "amb@world_human_hammering@male@base"
+    local animDict = "amb@prop_human_bbq@male@base"
     RequestAnimDict(animDict)
     while not HasAnimDictLoaded(animDict) do
         Wait(100)
@@ -130,7 +132,7 @@ function StopWorkingAnimation()
     local ped = PlayerPedId()
     
     -- Detener animación
-    StopAnimTask(ped, "amb@world_human_hammering@male@base", "base", 1.0)
+    StopAnimTask(ped, "amb@prop_human_bbq@male@base", "base", 1.0)
     
     -- Desfreezar jugador
     FreezeEntityPosition(ped, false)
@@ -163,7 +165,7 @@ function StartProgressUI(totalTime, isResuming)
             combat = true,
         },
         anim = {
-            dict = 'amb@world_human_hammering@male@base',
+            dict = 'amb@prop_human_bbq@male@base',
             clip = 'base'
         },
     }) then
@@ -326,22 +328,7 @@ RegisterNetEvent('smelting:processCompleted', function()
     StopWorkingAnimation()
 end)
 
--- Comando para verificar proceso
-lib.addCommand('checksmelt', {
-    help = 'Check active smelting process',
-    restricted = false
-}, function(source, args, raw)
-    if activeProcess then
-        CheckActiveProcess()
-    else
-        lib.notify({
-            title = 'Large Furnace',
-            description = 'You have no active processes',
-            type = 'info',
-            duration = 3000
-        })
-    end
-end)
+
 
 -- Limpiar al descargar el recurso
 AddEventHandler('onResourceStop', function(resourceName)

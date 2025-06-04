@@ -726,3 +726,28 @@ end)
 --         TriggerClientEvent('smelting:processCompleted', targetId)
 --     end
 -- end)
+
+-- Agregar este callback al final del archivo server/main.lua
+
+-- Callback NUI para refrescar la UI
+RegisterNetEvent('__cfx_nui:refreshUI', function()
+    local source = source
+    if not source then return end
+    
+    -- Obtener datos actualizados del jugador
+    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems)
+        -- Enviar datos actualizados a la UI
+        TriggerClientEvent('smelting:refreshUIData', source, {
+            items = items,
+            fuel = fuel,
+            outputItems = outputItems,
+            smeltingRules = Config.SmeltingRules
+        })
+    end, source)
+end)
+
+-- Event para enviar datos de refresh al cliente
+RegisterNetEvent('smelting:refreshUIData', function(data)
+    -- Este evento se enviará desde el servidor al cliente
+    -- No necesita código aquí, solo está registrado para el cliente
+end)

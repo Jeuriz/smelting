@@ -355,3 +355,34 @@ AddEventHandler('gameEventTriggered', function(name, args)
         end
     end
 end)
+
+-- Callback NUI para refrescar UI
+RegisterNUICallback('refreshUI', function(data, cb)
+    if isSmeltingOpen then
+        -- Solicitar datos actualizados del servidor
+        lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems)
+            -- Enviar datos actualizados a la UI
+            SendNUIMessage({
+                action = "refreshComplete",
+                items = items,
+                fuel = fuel,
+                outputItems = outputItems,
+                smeltingRules = Config.SmeltingRules
+            })
+        end)
+    end
+    cb('ok')
+end)
+
+-- Event handler para datos de refresh
+RegisterNetEvent('smelting:refreshUIData', function(data)
+    if isSmeltingOpen then
+        SendNUIMessage({
+            action = "refreshComplete",
+            items = data.items,
+            fuel = data.fuel,
+            outputItems = data.outputItems,
+            smeltingRules = data.smeltingRules
+        })
+    end
+end)

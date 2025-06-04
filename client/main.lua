@@ -1,6 +1,8 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local isSmeltingOpen = false
 local activeProcess = false
+local isFrozen = false
+local progressActive = false
 
 -- Cache de ox_lib
 local cache = {
@@ -19,8 +21,51 @@ CreateThread(function()
         SetBlipColour(blip, 17)
         SetBlipAsShortRange(blip, true)
         BeginTextCommandSetBlipName("STRING")
-        AddTextComponentString("Fundición")
+        AddTextComponentString("Large Furnace")
         EndTextCommandSetBlipName(blip)
+    end
+end)
+
+-- Configurar ox_target para las ubicaciones
+CreateThread(function()
+    Wait(1000) -- Esperar a que ox_target esté listo
+    
+    for k, v in pairs(Config.SmeltingLocations) do
+        -- Crear el target zone
+        exports.ox_target:addBoxZone({
+            coords = vector3(v.x, v.y, v.z),
+            size = vector3(2.0, 2.0, 2.0),
+            rotation = 0,
+            debug = false,
+            options = {
+                {
+                    name = 'smelting_furnace_' .. k,
+                    icon = 'fas fa-fire',
+                    label = 'Use Large Furnace',
+                    canInteract = function()
+                        return not progressActive
+                    end,
+                    onSelect = function()
+                        if activeProcess and not isSmeltingOpen then
+                            CheckActiveProcess()
+                        elseif not isSmeltingOpen and not progressActive then
+                            OpenSmeltingUI()
+                        end
+                    end
+                },
+                {
+                    name = 'check_process_' .. k,
+                    icon = 'fas fa-clock',
+                    label = 'Check Process',
+                    canInteract = function()
+                        return activeProcess and not isSmeltingOpen and not progressActive
+                    end,
+                    onSelect = function()
+                        CheckActiveProcess()
+                    end
+                }
+            }
+        })
     end
 end)
 
@@ -32,102 +77,139 @@ end)
 
 -- Función para verificar si hay un proceso activo
 function CheckActiveProcess()
+    if progressActive then return end
+    
     lib.callback('smelting:getProcessStatus', false, function(status)
         if status.active then
             activeProcess = true
-            lib.notify({
-                title = 'Fundición',
-                description = 'Tienes un proceso de fundición en curso',
-                type = 'info'
-            })
             
-            -- Mostrar UI con progreso
             local remainingTime = status.remainingTime
-            if remainingTime > 0 then
-                SendNUIMessage({
-                    action = "showProgress",
-                    totalTime = remainingTime
+            if remainingTime > 1000 then -- Solo si queda más de 1 segundo
+                lib.notify({
+                    title = 'Large Furnace',
+                    description = 'You have a smelting process in progress...',
+                    type = 'info',
+                    duration = 3000
                 })
                 
-                -- Esperar a que termine y completar
-                SetTimeout(remainingTime, function()
-                    TriggerServerEvent('smelting:completeProcess')
-                    lib.notify({
-                        title = 'Fundición',
-                        description = Config.Texts['smelting_complete'],
-                        type = 'success'
-                    })
-                    activeProcess = false
-                end)
+                -- Mostrar progreso en UI
+                StartProgressUI(remainingTime, true)
+                
             else
                 -- El proceso ya debería estar completo
                 TriggerServerEvent('smelting:completeProcess')
                 activeProcess = false
             end
+        else
+            activeProcess = false
         end
     end)
 end
 
--- Función principal para manejar las ubicaciones con ox_lib
-CreateThread(function()
-    -- Crear puntos de interacción con ox_lib
-    for k, v in pairs(Config.SmeltingLocations) do
-        local point = lib.points.new({
-            coords = vector3(v.x, v.y, v.z),
-            distance = Config.SmeltingDistance,
-            duiId = 'smelting_' .. k,
-        })
-
-        function point:onEnter()
-            if activeProcess then
-                lib.showTextUI('[E] Verificar Proceso', {
-                    position = "top-center",
-                    icon = 'fire',
-                    style = {
-                        borderRadius = 4,
-                        backgroundColor = '#ff6b35',
-                        color = 'white'
-                    }
-                })
-            else
-                lib.showTextUI(Config.Texts['open_smelting'], {
-                    position = "top-center",
-                    icon = 'fire',
-                    style = {
-                        borderRadius = 4,
-                        backgroundColor = '#ff6b35',
-                        color = 'white'
-                    }
-                })
-            end
-        end
-
-        function point:onExit()
-            lib.hideTextUI()
-        end
-
-        function point:nearby()
-            if self.currentDistance < 2.0 then
-                if IsControlJustPressed(0, 38) then -- E key
-                    if activeProcess then
-                        CheckActiveProcess()
-                    elseif not isSmeltingOpen then
-                        OpenSmeltingUI()
-                    end
-                end
-            end
-        end
+-- Función para iniciar animación de trabajo
+function StartWorkingAnimation()
+    local ped = PlayerPedId()
+    
+    -- Cargar animación
+    local animDict = "amb@world_human_hammering@male@base"
+    RequestAnimDict(animDict)
+    while not HasAnimDictLoaded(animDict) do
+        Wait(100)
     end
-end)
+    
+    -- Iniciar animación
+    TaskPlayAnim(ped, animDict, "base", 8.0, -8.0, -1, 1, 0, false, false, false)
+    
+    -- Freezar al jugador
+    FreezeEntityPosition(ped, true)
+    isFrozen = true
+end
 
--- Función para abrir la UI
+-- Función para detener animación y desfreezar
+function StopWorkingAnimation()
+    local ped = PlayerPedId()
+    
+    -- Detener animación
+    StopAnimTask(ped, "amb@world_human_hammering@male@base", "base", 1.0)
+    
+    -- Desfreezar jugador
+    FreezeEntityPosition(ped, false)
+    isFrozen = false
+end
+
+-- Función para mostrar progreso mejorado
+function StartProgressUI(totalTime, isResuming)
+    if progressActive then return end
+    
+    progressActive = true
+    
+    -- Cerrar UI de fundición si está abierta
+    if isSmeltingOpen then
+        CloseSmeltingUI()
+    end
+    
+    -- Iniciar animación
+    StartWorkingAnimation()
+    
+    -- Mostrar barra de progreso con ox_lib
+    if lib.progressBar({
+        duration = totalTime,
+        label = isResuming and 'Continuing smelting process...' or 'Smelting materials...',
+        useWhileDead = false,
+        canCancel = false,
+        disable = {
+            car = true,
+            move = true,
+            combat = true,
+        },
+        anim = {
+            dict = 'amb@world_human_hammering@male@base',
+            clip = 'base'
+        },
+    }) then
+        -- Completado exitosamente
+        StopWorkingAnimation()
+        
+        -- Esperar un poco antes de completar
+        Wait(500)
+        
+        if isResuming then
+            -- Si estaba reanudando, el servidor ya manejará la finalización
+            activeProcess = false
+        else
+            -- Si era un proceso nuevo, triggear completion
+            TriggerServerEvent('smelting:completeProcess')
+        end
+        
+        lib.notify({
+            title = 'Large Furnace',
+            description = 'Smelting process completed successfully!',
+            type = 'success',
+            duration = 4000
+        })
+        
+    else
+        -- Cancelado (aunque canCancel está en false, por si acaso)
+        StopWorkingAnimation()
+        TriggerServerEvent('smelting:cancelProcess')
+    end
+    
+    progressActive = false
+end
+
+-- Función para abrir la UI mejorada
 function OpenSmeltingUI()
     if activeProcess then
         lib.notify({
-            title = 'Fundición',
-            description = 'Ya tienes un proceso de fundición activo',
-            type = 'error'
+            title = 'Large Furnace',
+            description = 'You already have an active smelting process',
+            type = 'error',
+            duration = 3000
         })
+        return
+    end
+    
+    if progressActive then
         return
     end
     
@@ -138,7 +220,7 @@ function OpenSmeltingUI()
             action = "openSmelting",
             items = items,
             fuel = fuel,
-            outputItems = outputItems, -- Items ya procesados
+            outputItems = outputItems,
             smeltingRules = Config.SmeltingRules
         })
     end)
@@ -160,7 +242,7 @@ RegisterNUICallback('closeSmelting', function(data, cb)
 end)
 
 RegisterNUICallback('startSmelting', function(data, cb)
-    if activeProcess then
+    if activeProcess or progressActive then
         cb('error')
         return
     end
@@ -172,19 +254,27 @@ RegisterNUICallback('startSmelting', function(data, cb)
     lib.callback('smelting:startProcess', false, function(success, message, totalTime)
         if success then
             activeProcess = true
+            
             lib.notify({
-                title = 'Fundición',
-                description = Config.Texts['smelting_started'],
-                type = 'success'
+                title = 'Large Furnace',
+                description = 'Starting smelting process...',
+                type = 'success',
+                duration = 3000
             })
+            
+            -- Cerrar UI inmediatamente
             CloseSmeltingUI()
             
-            -- El progreso se maneja en la UI
+            -- Esperar un poco y iniciar progreso
+            Wait(500)
+            StartProgressUI(totalTime, false)
+            
         else
             lib.notify({
-                title = 'Fundición',
+                title = 'Large Furnace',
                 description = message,
-                type = 'error'
+                type = 'error',
+                duration = 4000
             })
         end
     end, selectedItems, fuelAmount, fuelType)
@@ -192,72 +282,63 @@ RegisterNUICallback('startSmelting', function(data, cb)
     cb('ok')
 end)
 
--- Callbacks para Take Ore y Take All
+-- Callbacks para Take Ore y Take All (eliminados - entrega automática)
+-- Las funciones se mantienen para compatibilidad pero no se usan
+
 RegisterNUICallback('takeOre', function(data, cb)
-    lib.callback('smelting:takeOre', false, function(success, message)
-        if success then
-            lib.notify({
-                title = 'Fundición',
-                description = 'Has recogido los minerales procesados',
-                type = 'success'
-            })
-            CloseSmeltingUI()
-        else
-            lib.notify({
-                title = 'Fundición',
-                description = message or 'No hay minerales para recoger',
-                type = 'error'
-            })
-        end
-    end)
+    -- Ya no se usa - entrega automática
     cb('ok')
 end)
 
 RegisterNUICallback('takeAll', function(data, cb)
-    lib.callback('smelting:takeAll', false, function(success, message)
-        if success then
-            lib.notify({
-                title = 'Fundición',
-                description = 'Has recogido todo el contenido',
-                type = 'success'
-            })
-            CloseSmeltingUI()
-        else
-            lib.notify({
-                title = 'Fundición',
-                description = message or 'No hay items para recoger',
-                type = 'error'
-            })
-        end
-    end)
+    -- Ya no se usa - entrega automática  
     cb('ok')
 end)
+
+-- Función para refrescar la UI sin cerrarla
+function RefreshSmeltingUI()
+    if isSmeltingOpen then
+        lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems)
+            SendNUIMessage({
+                action = "updateSmelting",
+                items = items,
+                fuel = fuel,
+                outputItems = outputItems,
+                smeltingRules = Config.SmeltingRules
+            })
+        end)
+    end
+end
 
 -- Event handlers
 RegisterNetEvent('smelting:notify', function(message, type)
     lib.notify({
-        title = 'Fundición',
+        title = 'Large Furnace',
         description = message,
-        type = type
+        type = type,
+        duration = 4000
     })
 end)
 
 RegisterNetEvent('smelting:processCompleted', function()
     activeProcess = false
+    progressActive = false
+    StopWorkingAnimation()
 end)
 
--- Comando para verificar proceso con ox_lib
+-- Comando para verificar proceso
 lib.addCommand('checksmelt', {
-    help = 'Verificar proceso de fundición activo',
+    help = 'Check active smelting process',
     restricted = false
 }, function(source, args, raw)
     if activeProcess then
         CheckActiveProcess()
     else
         lib.notify({
-            title = 'Fundición',
-            description = 'No tienes procesos activos',
-            type = 'info'
+            title = 'Large Furnace',
+            description = 'You have no active processes',
+            type = 'info',
+            duration = 3000
         })
     end
 end)
@@ -265,9 +346,25 @@ end)
 -- Limpiar al descargar el recurso
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName == GetCurrentResourceName() then
-        lib.hideTextUI()
+        if isFrozen then
+            StopWorkingAnimation()
+        end
         if isSmeltingOpen then
             CloseSmeltingUI()
+        end
+        progressActive = false
+    end
+end)
+
+-- Limpiar cuando el jugador muere o se desconecta
+AddEventHandler('gameEventTriggered', function(name, args)
+    if name == 'CEventNetworkEntityDamage' then
+        local victim = args[1]
+        if victim == PlayerPedId() and IsEntityDead(victim) then
+            if isFrozen then
+                StopWorkingAnimation()
+            end
+            progressActive = false
         end
     end
 end)

@@ -27,7 +27,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 480px;
+            width: 520px;
             background: rgba(80, 20, 0, 0.95);
             border: 2px solid #8b4513;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
@@ -83,18 +83,14 @@
             transform: translateY(-1px);
         }
 
-        .btn-take-ore {
-            background: #8b6914;
-            border-color: #cd853f;
+        .btn-refresh {
+            background: #3A5F98;
+            border-color: #4A6FA8;
         }
 
-        .btn-take-ore:hover {
-            background: #a47e1b;
-        }
-
-        .btn-take-all {
-            background: #654321;
-            border-color: #8b4513;
+        .btn-refresh:hover {
+            background: #4A6FA8;
+            border-color: #5A7FB8;
         }
 
         .close-btn {
@@ -192,6 +188,175 @@
             border: 1px solid rgba(0, 0, 0, 0.5);
         }
 
+        /* Fuel selector */
+        .fuel-selector {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(40, 20, 10, 0.95);
+            border: 2px solid #654321;
+            min-width: 180px;
+            z-index: 1000;
+            margin-top: 5px;
+        }
+
+        .fuel-selector.show {
+            display: block;
+        }
+
+        .fuel-option {
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #cd853f;
+            font-size: 12px;
+        }
+
+        .fuel-option:hover {
+            background: rgba(139, 69, 19, 0.4);
+            color: #ff6b35;
+        }
+
+        .fuel-amount {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        /* Quantity input for fuel */
+        .quantity-input-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .quantity-input {
+            background: rgba(40, 20, 10, 0.9);
+            border: 1px solid #654321;
+            color: #ff6b35;
+            width: 50px;
+            height: 25px;
+            text-align: center;
+            font-size: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .quantity-input:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+
+        .quantity-btn {
+            background: #654321;
+            border: 1px solid #8b4513;
+            color: #ff6b35;
+            width: 20px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .quantity-btn:hover {
+            background: #8b4513;
+            border-color: #ff6b35;
+        }
+
+        /* Ore selection improvements */
+        .choose-ore-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .choose-label {
+            background: rgba(139, 69, 19, 0.8);
+            padding: 8px 15px;
+            border: 1px solid #8b4513;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #cd853f;
+            font-size: 11px;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .ore-selection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+             margin-bottom: 7px;
+        }
+
+        .ore-item {
+            background: rgba(40, 20, 10, 0.9);
+            border: 2px solid #654321;
+            padding: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .ore-item:hover {
+            border-color: #8b4513;
+            background: rgba(60, 30, 15, 0.9);
+        }
+
+        .ore-item.selected {
+            border-color: #ff6b35;
+            background: rgba(80, 40, 20, 0.9);
+        }
+
+        .ore-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .ore-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .ore-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ore-info {
+            flex: 1;
+        }
+
+        .ore-name {
+            color: #ff6b35;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .ore-available {
+            color: #cd853f;
+            font-size: 10px;
+        }
+
+        .ore-quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            justify-content: center;
+        }
+
         .slots-container {
             display: flex;
             gap: 8px;
@@ -248,68 +413,6 @@
             align-items: center;
         }
 
-        .choose-ore-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .choose-label {
-            background: rgba(139, 69, 19, 0.8);
-            padding: 8px 15px;
-            border: 1px solid #8b4513;
-            font-weight: 600;
-            margin-bottom: 11px;
-            text-transform: uppercase;
-            color: #cd853f;
-            font-size: 11px;
-            font-family: 'Orbitron', monospace;
-        }
-
-        .ore-selection {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 5px;
-        }
-
-        .ore-option {
-            width: 40px;
-            height: 40px;
-            background: rgba(40, 20, 10, 0.9);
-            border: 2px solid #654321;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .ore-option:hover {
-            border-color: #8b4513;
-            background: rgba(60, 30, 15, 0.9);
-        }
-
-        .ore-option.selected {
-            border-color: #ff6b35;
-            background: rgba(80, 40, 20, 0.9);
-        }
-
-        .ore-option .ore-icon {
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .ore-option .ore-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
         .btn-turn-on {
             background: linear-gradient(to bottom, #8b4513, #654321);
             border: 2px solid #8b4513;
@@ -346,44 +449,6 @@
 
         .fire-icon {
             color: #ff6b35;
-        }
-
-        /* Selector de combustible */
-        .fuel-selector {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: rgba(40, 20, 10, 0.95);
-            border: 2px solid #654321;
-            min-width: 180px;
-            z-index: 1000;
-            margin-top: 5px;
-        }
-
-        .fuel-selector.show {
-            display: block;
-        }
-
-        .fuel-option {
-            padding: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #cd853f;
-            font-size: 12px;
-        }
-
-        .fuel-option:hover {
-            background: rgba(139, 69, 19, 0.4);
-            color: #ff6b35;
-        }
-
-        .fuel-amount {
-            color: #ff6b35;
-            font-weight: 600;
         }
 
         /* Tooltip */
@@ -455,7 +520,7 @@
             font-weight: 700;
         }
 
-        /* Animaciones simples */
+        /* Animations */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -484,7 +549,7 @@
             animation: glow 3s ease-in-out infinite;
         }
 
-        /* Scrollbar simple */
+        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -501,29 +566,20 @@
             background: #ff6b35;
         }
 
-        /* Efectos hover simples */
+        /* Hover effects */
         .btn-header:hover,
         .btn-turn-on:hover:not(:disabled),
         .fuel-slot:hover,
         .slot:hover,
-        .ore-option:hover {
+        .ore-item:hover {
             box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
         }
 
-        /* Estados activos */
+        /* Active states */
         .slot.active,
-        .ore-option.selected,
+        .ore-item.selected,
         .fuel-slot.has-fuel {
             box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
-        }
-        .btn-refresh {
-            background: #3A5F98;
-            border-color: #4A6FA8;
-        }
-
-        .btn-refresh:hover {
-            background: #4A6FA8;
-            border-color: #5A7FB8;
         }
     </style>
 </head>
@@ -544,24 +600,24 @@
             <div class="furnace-section">
                 <div class="section-label">FUEL</div>
                 <div class="fuel-slot" id="fuelSlot" onclick="toggleFuelSelector()">
-                    <div></div>
                     <div class="slot-item" id="fuelDisplay">
                         <div class="slot-icon">🔥</div>
                     </div>
                     <div class="fuel-selector" id="fuelSelector"></div>
-
                 </div>
-            </div>
-              <!-- FUEL Section -->
-              <div class="furnace-section">
-               
+                <div class="quantity-input-container" id="fuelQuantityControls" style="display: none;">
+                    <button class="quantity-btn" onclick="adjustFuelQuantity(-1)">-</button>
+                    <input type="number" class="quantity-input" id="fuelQuantityInput" min="1" value="1" onchange="updateFuelQuantity()">
+                    <button class="quantity-btn" onclick="adjustFuelQuantity(1)">+</button>
+                    <span style="color: #cd853f; font-size: 10px; margin-left: 5px;">/ <span id="maxFuelAmount">0</span></span>
+                </div>
             </div>
 
             <!-- INPUT Section -->
             <div class="furnace-section">
                 <div class="section-label">INPUT</div>
                 <div class="choose-ore-section">
-                    <div class="choose-label">SELECT ORE:</div>
+                    <div class="choose-label">SELECT MATERIALS:</div>
                     <div class="ore-selection" id="oreSelection"></div>
                 </div>
                 <div class="input-slots">
@@ -598,7 +654,6 @@
         </div>
 
         <div class="bottom-actions">
-           
             <button class="btn-turn-on" id="turnOnBtn" onclick="startSmelting()" disabled>
                 <span class="fire-icon">🔥</span> IGNITE
             </button>
@@ -624,6 +679,7 @@
             smeltingRules: {},
             selectedFuel: null,
             selectedFuelAmount: 0,
+            maxFuelAmount: 0,
             selectedOres: {},
             currentOutput: {},
             outputItems: {}
@@ -643,21 +699,20 @@
         function hideTooltip() {
             document.getElementById('tooltip').classList.remove('show');
         }
- // Función para refrescar la UI
- function refreshUI() {
+
+        // Función para refrescar la UI
+        function refreshUI() {
             const refreshBtn = document.querySelector('.btn-refresh');
             
-            // Agregar efecto visual de refresh
             refreshBtn.classList.add('refreshing');
             
             setTimeout(() => {
                 refreshBtn.classList.remove('refreshing');
             }, 500);
             
-            // Resetear todos los inputs y selecciones
-            resetAllInputs();
+            // Solo resetear selecciones, no la estructura completa
+            resetSelections();
             
-            // Solicitar datos actualizados del servidor
             fetch(`https://${GetParentResourceName()}/refreshUI`, {
                 method: 'POST',
                 headers: {
@@ -665,36 +720,38 @@
                 },
                 body: JSON.stringify({})
             }).then(response => {
-                // La respuesta se manejará a través de eventos de mensajes
                 console.log('Refresh solicitado al servidor');
             }).catch(error => {
                 console.error('Error al refrescar UI:', error);
             });
         }
 
-        // Función para resetear todos los inputs
-        function resetAllInputs() {
-            // Limpiar combustible seleccionado
+        // Función para resetear solo las selecciones (no la estructura)
+        function resetSelections() {
             furnaceData.selectedFuel = null;
             furnaceData.selectedFuelAmount = 0;
+            furnaceData.maxFuelAmount = 0;
             furnaceData.selectedOres = {};
             furnaceData.currentOutput = {};
             
-            // Resetear slot de combustible
+            // Resetear fuel display
             const fuelSlot = document.getElementById('fuelSlot');
             const fuelDisplay = document.getElementById('fuelDisplay');
             fuelSlot.classList.remove('has-fuel');
-            fuelDisplay.innerHTML = `
-                <div class="slot-icon">🔥</div>
-            `;
+            fuelDisplay.innerHTML = `<div class="slot-icon">🔥</div>`;
             
-            // Cerrar selector de combustible
+            // Ocultar controles de cantidad de combustible
+            document.getElementById('fuelQuantityControls').style.display = 'none';
             document.getElementById('fuelSelector').classList.remove('show');
             
-            // Limpiar selecciones de minerales
-            const oreOptions = document.querySelectorAll('.ore-option');
-            oreOptions.forEach(option => {
-                option.classList.remove('selected');
+            // Limpiar selecciones de minerales (mantener estructura)
+            const oreItems = document.querySelectorAll('.ore-item');
+            oreItems.forEach(item => {
+                item.classList.remove('selected');
+                const input = item.querySelector('.quantity-input');
+                if (input) {
+                    input.value = 1;
+                }
             });
             
             // Limpiar slots de input
@@ -714,12 +771,52 @@
                 }
             });
             
-            // Actualizar botón de encendido
-            const turnOnBtn = document.getElementById('turnOnBtn');
-            turnOnBtn.disabled = true;
-            turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> TURN ON`;
+            updateUI();
+            hideTooltip();
             
-            // Ocultar tooltip
+            console.log('Selecciones reseteadas');
+        }
+
+        // Función para resetear todos los inputs
+        function resetAllInputs() {
+            furnaceData.selectedFuel = null;
+            furnaceData.selectedFuelAmount = 0;
+            furnaceData.maxFuelAmount = 0;
+            furnaceData.selectedOres = {};
+            furnaceData.currentOutput = {};
+            
+            // Resetear fuel
+            const fuelSlot = document.getElementById('fuelSlot');
+            const fuelDisplay = document.getElementById('fuelDisplay');
+            fuelSlot.classList.remove('has-fuel');
+            fuelDisplay.innerHTML = `<div class="slot-icon">🔥</div>`;
+            
+            // Ocultar controles de cantidad de combustible
+            document.getElementById('fuelQuantityControls').style.display = 'none';
+            document.getElementById('fuelSelector').classList.remove('show');
+            
+            // Limpiar selecciones de minerales
+            const oreSelection = document.getElementById('oreSelection');
+            oreSelection.innerHTML = '';
+            
+            // Limpiar slots de input
+            const inputSlots = document.querySelectorAll('#inputSlots .slot');
+            inputSlots.forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('has-item');
+            });
+            
+            // Limpiar preview de output
+            const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            outputSlots.forEach((slot, index) => {
+                if (index >= Object.keys(furnaceData.outputItems).length) {
+                    slot.innerHTML = '';
+                    slot.classList.remove('has-item');
+                    slot.style.opacity = '1';
+                }
+            });
+            
+            updateUI();
             hideTooltip();
             
             console.log('UI reseteada completamente');
@@ -743,6 +840,16 @@
                 document.getElementById('furnaceContainer').classList.remove('show');
             } else if (data.action === 'showProgress') {
                 showProgress(data.totalTime);
+            } else if (data.action === 'refreshComplete') {
+                // Manejar refresh de datos
+                furnaceData.items = data.items || {};
+                furnaceData.fuel = data.fuel || {};
+                furnaceData.smeltingRules = data.smeltingRules || {};
+                furnaceData.outputItems = data.outputItems || {};
+                
+                // Recrear la UI con los nuevos datos
+                setupFurnaceUI();
+                console.log('UI refreshed with new data');
             }
         });
 
@@ -754,6 +861,13 @@
 
         function updateOutputItems() {
             const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            
+            // Limpiar slots primero
+            outputSlots.forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('has-item');
+                slot.style.opacity = '1';
+            });
             
             if (Object.keys(furnaceData.outputItems).length > 0) {
                 let slotIndex = 0;
@@ -780,33 +894,49 @@
             const oreSelection = document.getElementById('oreSelection');
             oreSelection.innerHTML = '';
             
-            for (const [itemName, amount] of Object.entries(furnaceData.items)) {
+            for (const [itemName, maxAmount] of Object.entries(furnaceData.items)) {
                 if (furnaceData.smeltingRules[itemName]) {
-                    const oreOption = document.createElement('div');
-                    oreOption.className = 'ore-option';
-                    oreOption.setAttribute('data-ore', itemName);
-                    oreOption.setAttribute('data-amount', amount);
-                    oreOption.onclick = () => selectOre(itemName);
+                    const oreItem = document.createElement('div');
+                    oreItem.className = 'ore-item';
+                    oreItem.setAttribute('data-ore', itemName);
+                    oreItem.setAttribute('data-max-amount', maxAmount);
                     
-                    oreOption.innerHTML = `
-                        <span class="ore-icon">
-                            <img src="nui://inventory_images/images/${itemName}.webp" alt="${itemName}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
-                        </span>
-                        <div class="tooltip-content" style="display:none">
-                            ${formatItemName(itemName)} (${amount})
+                    oreItem.innerHTML = `
+                        <div class="ore-header">
+                            <div class="ore-icon">
+                                <img src="nui://inventory_images/images/${itemName}.webp" alt="${itemName}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
+                            </div>
+                            <div class="ore-info">
+                                <div class="ore-name">${formatItemName(itemName)}</div>
+                                <div class="ore-available">Available: ${maxAmount}</div>
+                            </div>
+                        </div>
+                        <div class="ore-quantity-controls">
+                            <button class="quantity-btn" onclick="adjustOreQuantity('${itemName}', -1)">-</button>
+                            <input type="number" class="quantity-input" id="ore_${itemName}" min="1" max="${maxAmount}" value="1" onchange="updateOreQuantity('${itemName}')">
+                            <button class="quantity-btn" onclick="adjustOreQuantity('${itemName}', 1)">+</button>
                         </div>
                     `;
                     
                     // Agregar eventos de hover para tooltip
-                    oreOption.addEventListener('mouseenter', function() {
-                        showTooltip(this, `${formatItemName(itemName)} (${amount})`);
+                    oreItem.addEventListener('mouseenter', function() {
+                        const rule = furnaceData.smeltingRules[itemName];
+                        const tooltipText = `${formatItemName(itemName)} → ${formatItemName(rule.result)} (${rule.amount}x per unit)`;
+                        showTooltip(this, tooltipText);
                     });
                     
-                    oreOption.addEventListener('mouseleave', function() {
+                    oreItem.addEventListener('mouseleave', function() {
                         hideTooltip();
                     });
                     
-                    oreSelection.appendChild(oreOption);
+                    // Evento de click para seleccionar/deseleccionar
+                    oreItem.addEventListener('click', function(e) {
+                        if (!e.target.classList.contains('quantity-btn') && !e.target.classList.contains('quantity-input')) {
+                            toggleOreSelection(itemName);
+                        }
+                    });
+                    
+                    oreSelection.appendChild(oreItem);
                 }
             }
         }
@@ -835,15 +965,15 @@
 
         function selectFuel(fuelType, maxAmount) {
             furnaceData.selectedFuel = fuelType;
-            furnaceData.selectedFuelAmount = Math.min(99, maxAmount);
+            furnaceData.maxFuelAmount = maxAmount;
+            furnaceData.selectedFuelAmount = Math.min(1, maxAmount);
             
-            const fuelDisplay = document.getElementById('fuelDisplay');
-            fuelDisplay.innerHTML = `
-                <div class="slot-icon">
-                    <img src="nui://inventory_images/images/${fuelType}.webp" alt="${fuelType}" onerror="this.style.display='none'; this.parentElement.innerHTML='🪵'">
-                </div>
-                <span class="slot-count">x${furnaceData.selectedFuelAmount}</span>
-            `;
+            updateFuelDisplay();
+            
+            // Mostrar controles de cantidad
+            document.getElementById('fuelQuantityControls').style.display = 'flex';
+            document.getElementById('fuelQuantityInput').value = furnaceData.selectedFuelAmount;
+            document.getElementById('maxFuelAmount').textContent = maxAmount;
             
             document.getElementById('fuelSlot').classList.add('has-fuel');
             document.getElementById('fuelSelector').classList.remove('show');
@@ -851,24 +981,96 @@
             updateUI();
         }
 
-        function selectOre(oreName) {
-            const oreOption = document.querySelector(`[data-ore="${oreName}"]`);
-            const maxAmount = parseInt(oreOption.getAttribute('data-amount'));
+        function adjustFuelQuantity(change) {
+            if (!furnaceData.selectedFuel) return;
+            
+            const newAmount = furnaceData.selectedFuelAmount + change;
+            if (newAmount >= 1 && newAmount <= furnaceData.maxFuelAmount) {
+                furnaceData.selectedFuelAmount = newAmount;
+                document.getElementById('fuelQuantityInput').value = newAmount;
+                updateFuelDisplay();
+                updateUI();
+            }
+        }
+
+        function updateFuelQuantity() {
+            if (!furnaceData.selectedFuel) return;
+            
+            const input = document.getElementById('fuelQuantityInput');
+            let value = parseInt(input.value) || 1;
+            
+            value = Math.max(1, Math.min(value, furnaceData.maxFuelAmount));
+            
+            furnaceData.selectedFuelAmount = value;
+            input.value = value;
+            updateFuelDisplay();
+            updateUI();
+        }
+
+        function updateFuelDisplay() {
+            if (!furnaceData.selectedFuel) return;
+            
+            const fuelDisplay = document.getElementById('fuelDisplay');
+            fuelDisplay.innerHTML = `
+                <div class="slot-icon">
+                    <img src="nui://inventory_images/images/${furnaceData.selectedFuel}.webp" alt="${furnaceData.selectedFuel}" onerror="this.style.display='none'; this.parentElement.innerHTML='🪵'">
+                </div>
+                <span class="slot-count">x${furnaceData.selectedFuelAmount}</span>
+            `;
+        }
+
+        function toggleOreSelection(oreName) {
+            const oreItem = document.querySelector(`[data-ore="${oreName}"]`);
             
             if (furnaceData.selectedOres[oreName]) {
+                // Deseleccionar
                 delete furnaceData.selectedOres[oreName];
-                oreOption.classList.remove('selected');
+                oreItem.classList.remove('selected');
             } else {
-                // Límite de 5 slots de input
-                if (Object.keys(furnaceData.selectedOres).length >= 5) return;
+                // Verificar límite de 5 slots
+                if (Object.keys(furnaceData.selectedOres).length >= 5) {
+                    return;
+                }
                 
-                furnaceData.selectedOres[oreName] = Math.min(20, maxAmount);
-                oreOption.classList.add('selected');
+                // Seleccionar con cantidad por defecto
+                const quantityInput = document.getElementById(`ore_${oreName}`);
+                const quantity = parseInt(quantityInput.value) || 1;
+                furnaceData.selectedOres[oreName] = quantity;
+                oreItem.classList.add('selected');
             }
             
             updateInputSlots();
             updateOutputPreview();
             updateUI();
+        }
+
+        function adjustOreQuantity(oreName, change) {
+            const input = document.getElementById(`ore_${oreName}`);
+            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
+            
+            let newValue = parseInt(input.value) + change;
+            newValue = Math.max(1, Math.min(newValue, maxAmount));
+            
+            input.value = newValue;
+            updateOreQuantity(oreName);
+        }
+
+        function updateOreQuantity(oreName) {
+            const input = document.getElementById(`ore_${oreName}`);
+            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
+            
+            let value = parseInt(input.value) || 1;
+            value = Math.max(1, Math.min(value, maxAmount));
+            
+            input.value = value;
+            
+            // Si el ore está seleccionado, actualizar la cantidad
+            if (furnaceData.selectedOres[oreName]) {
+                furnaceData.selectedOres[oreName] = value;
+                updateInputSlots();
+                updateOutputPreview();
+                updateUI();
+            }
         }
 
         function updateInputSlots() {
@@ -900,7 +1102,7 @@
         function updateOutputPreview() {
             const outputSlots = document.querySelectorAll('#outputSlots .slot');
             
-            // Primero, limpiar slots que no tienen items procesados
+            // Limpiar slots que no tienen items procesados
             outputSlots.forEach((slot, index) => {
                 if (index >= Object.keys(furnaceData.outputItems).length) {
                     slot.innerHTML = '';
@@ -913,7 +1115,7 @@
             
             furnaceData.currentOutput = {};
             
-            // Calcular output basado en los ores seleccionados
+            // Calcular output basado en los ores seleccionados con sus cantidades
             for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
                 const rule = furnaceData.smeltingRules[ore];
                 if (rule) {
@@ -951,7 +1153,7 @@
             const hasOres = Object.keys(furnaceData.selectedOres).length > 0;
             const hasFuel = furnaceData.selectedFuel && furnaceData.selectedFuelAmount > 0;
             
-            // Calcular combustible necesario
+            // Calcular combustible necesario total
             let totalFuelNeeded = 0;
             for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
                 const rule = furnaceData.smeltingRules[ore];
@@ -964,7 +1166,12 @@
             turnOnBtn.disabled = !canSmelt;
             
             if (!canSmelt && totalFuelNeeded > 0 && hasFuel) {
-                turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${totalFuelNeeded - furnaceData.selectedFuelAmount} MORE FUEL`;
+                const needed = totalFuelNeeded - furnaceData.selectedFuelAmount;
+                if (needed > 0) {
+                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${needed} MORE FUEL`;
+                } else {
+                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
+                }
             } else {
                 turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
             }
@@ -973,7 +1180,7 @@
         function startSmelting() {
             if (!furnaceData.selectedFuel || Object.keys(furnaceData.selectedOres).length === 0) return;
             
-            // Calcular tiempo total
+            // Calcular tiempo total basado en las cantidades seleccionadas
             let totalTime = 0;
             for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
                 const rule = furnaceData.smeltingRules[ore];
@@ -995,7 +1202,6 @@
                     totalTime: totalTime
                 })
             });
-            
         }
 
         function showProgress(totalTime) {

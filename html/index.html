@@ -312,6 +312,25 @@
             background: rgba(80, 40, 20, 0.9);
         }
 
+        /* Estilos para ores que están deshabilitados por skills */
+        .ore-item.skill-locked {
+            background: rgba(20, 10, 5, 0.9);
+            border-color: #3e2723;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .ore-item.skill-locked:hover {
+            border-color: #3e2723;
+            background: rgba(20, 10, 5, 0.9);
+            box-shadow: none;
+        }
+
+        .ore-item.skill-locked .ore-quantity-controls {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
         .ore-header {
             display: flex;
             align-items: center;
@@ -345,9 +364,17 @@
             margin-bottom: 2px;
         }
 
+        .ore-item.skill-locked .ore-name {
+            color: #654321;
+        }
+
         .ore-available {
             color: #cd853f;
             font-size: 10px;
+        }
+
+        .ore-item.skill-locked .ore-available {
+            color: #3e2723;
         }
 
         .ore-quantity-controls {
@@ -395,6 +422,38 @@
 
         .slot.has-item {
             border-color: #8b4513;
+        }
+
+        /* Estilos para slots bloqueados por skills */
+        .slot.skill-locked {
+            background: rgba(20, 10, 5, 0.9);
+            border-color: #3e2723;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .slot.skill-locked:hover {
+            border-color: #3e2723;
+            background: rgba(20, 10, 5, 0.9);
+            box-shadow: none;
+        }
+
+        .slot-lock-icon {
+            font-size: 24px;
+            color: #654321;
+        }
+
+        .slot-skill-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #654321;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 4px;
+            border-radius: 2px;
+            white-space: nowrap;
         }
 
         .arrow-down {
@@ -570,8 +629,8 @@
         .btn-header:hover,
         .btn-turn-on:hover:not(:disabled),
         .fuel-slot:hover,
-        .slot:hover,
-        .ore-item:hover {
+        .slot:hover:not(.skill-locked),
+        .ore-item:hover:not(.skill-locked) {
             box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
         }
 
@@ -682,10 +741,13 @@
             maxFuelAmount: 0,
             selectedOres: {},
             currentOutput: {},
-            outputItems: {}
+            outputItems: {},
+            playerSkills: {},
+            slotSkills: {},
+            availableSlots: 1 // Por defecto solo el primer slot
         };
 
-        // Sistema de tooltip mejorado
+        // Sistema de tooltip mejorado con skills
         function showTooltip(element, text) {
             const tooltip = document.getElementById('tooltip');
             const rect = element.getBoundingClientRect();
@@ -698,6 +760,31 @@
 
         function hideTooltip() {
             document.getElementById('tooltip').classList.remove('show');
+        }
+
+        // Función para verificar si un slot está disponible
+        function isSlotAvailable(slotNumber) {
+            const requiredSkill = furnaceData.slotSkills[slotNumber];
+            
+            // Si no requiere skill, está disponible
+            if (!requiredSkill) {
+                return true;
+            }
+            
+            // Verificar si el jugador tiene la skill
+            return furnaceData.playerSkills[requiredSkill] === true;
+        }
+
+        // Función para calcular slots disponibles
+        function calculateAvailableSlots() {
+            let count = 0;
+            for (let i = 1; i <= 5; i++) {
+                if (isSlotAvailable(i)) {
+                    count++;
+                }
+            }
+            furnaceData.availableSlots = count;
+            return count;
         }
 
         // Función para refrescar la UI
@@ -754,12 +841,8 @@
                 }
             });
             
-            // Limpiar slots de input
-            const inputSlots = document.querySelectorAll('#inputSlots .slot');
-            inputSlots.forEach(slot => {
-                slot.innerHTML = '';
-                slot.classList.remove('has-item');
-            });
+            // Limpiar slots de input (mantener candados)
+            updateInputSlots();
             
             // Limpiar preview de output (mantener items ya procesados)
             const outputSlots = document.querySelectorAll('#outputSlots .slot');
@@ -777,51 +860,6 @@
             console.log('Selecciones reseteadas');
         }
 
-        // Función para resetear todos los inputs
-        function resetAllInputs() {
-            furnaceData.selectedFuel = null;
-            furnaceData.selectedFuelAmount = 0;
-            furnaceData.maxFuelAmount = 0;
-            furnaceData.selectedOres = {};
-            furnaceData.currentOutput = {};
-            
-            // Resetear fuel
-            const fuelSlot = document.getElementById('fuelSlot');
-            const fuelDisplay = document.getElementById('fuelDisplay');
-            fuelSlot.classList.remove('has-fuel');
-            fuelDisplay.innerHTML = `<div class="slot-icon">🔥</div>`;
-            
-            // Ocultar controles de cantidad de combustible
-            document.getElementById('fuelQuantityControls').style.display = 'none';
-            document.getElementById('fuelSelector').classList.remove('show');
-            
-            // Limpiar selecciones de minerales
-            const oreSelection = document.getElementById('oreSelection');
-            oreSelection.innerHTML = '';
-            
-            // Limpiar slots de input
-            const inputSlots = document.querySelectorAll('#inputSlots .slot');
-            inputSlots.forEach(slot => {
-                slot.innerHTML = '';
-                slot.classList.remove('has-item');
-            });
-            
-            // Limpiar preview de output
-            const outputSlots = document.querySelectorAll('#outputSlots .slot');
-            outputSlots.forEach((slot, index) => {
-                if (index >= Object.keys(furnaceData.outputItems).length) {
-                    slot.innerHTML = '';
-                    slot.classList.remove('has-item');
-                    slot.style.opacity = '1';
-                }
-            });
-            
-            updateUI();
-            hideTooltip();
-            
-            console.log('UI reseteada completamente');
-        }
-
         // Event listener para mensajes
         window.addEventListener('message', function(event) {
             const data = event.data;
@@ -831,9 +869,12 @@
                 furnaceData.fuel = data.fuel || {};
                 furnaceData.smeltingRules = data.smeltingRules || {};
                 furnaceData.outputItems = data.outputItems || {};
+                furnaceData.playerSkills = data.playerSkills || {};
+                furnaceData.slotSkills = data.slotSkills || {};
                 furnaceData.selectedOres = {};
                 furnaceData.currentOutput = {};
                 
+                calculateAvailableSlots();
                 setupFurnaceUI();
                 document.getElementById('furnaceContainer').classList.add('show');
             } else if (data.action === 'closeSmelting') {
@@ -846,17 +887,54 @@
                 furnaceData.fuel = data.fuel || {};
                 furnaceData.smeltingRules = data.smeltingRules || {};
                 furnaceData.outputItems = data.outputItems || {};
+                furnaceData.playerSkills = data.playerSkills || {};
+                furnaceData.slotSkills = data.slotSkills || {};
                 
+                calculateAvailableSlots();
                 // Recrear la UI con los nuevos datos
                 setupFurnaceUI();
-                console.log('UI refreshed with new data');
+                console.log('UI refreshed with new data and skills');
             }
         });
 
         function setupFurnaceUI() {
+            setupInputSlots(); // Configurar candados en slots
             setupOreSelection();
             updateOutputItems();
             updateUI();
+        }
+
+        // Función para configurar los slots de input con candados
+        function setupInputSlots() {
+            const inputSlots = document.querySelectorAll('#inputSlots .slot');
+            
+            inputSlots.forEach((slot, index) => {
+                const slotNumber = index + 1; // Los slots van de 1 a 5
+                
+                // Limpiar el slot
+                slot.innerHTML = '';
+                slot.classList.remove('skill-locked', 'has-item');
+                
+                if (!isSlotAvailable(slotNumber)) {
+                    // Slot bloqueado por skill
+                    slot.classList.add('skill-locked');
+                    const requiredSkill = furnaceData.slotSkills[slotNumber];
+                    
+                    slot.innerHTML = `
+                        <div class="slot-lock-icon">🔒</div>
+                        <div class="slot-skill-label">${requiredSkill}</div>
+                    `;
+                    
+                    // Agregar tooltip para skills bloqueadas
+                    slot.addEventListener('mouseenter', function() {
+                        showTooltip(this, `Skill required: ${requiredSkill}`);
+                    });
+                    
+                    slot.addEventListener('mouseleave', function() {
+                        hideTooltip();
+                    });
+                }
+            });
         }
 
         function updateOutputItems() {
@@ -901,6 +979,14 @@
                     oreItem.setAttribute('data-ore', itemName);
                     oreItem.setAttribute('data-max-amount', maxAmount);
                     
+                    // Verificar si el jugador puede seleccionar más ores
+                    const selectedCount = Object.keys(furnaceData.selectedOres).length;
+                    const canSelect = selectedCount < furnaceData.availableSlots;
+                    
+                    if (!canSelect && !furnaceData.selectedOres[itemName]) {
+                        oreItem.classList.add('skill-locked');
+                    }
+                    
                     oreItem.innerHTML = `
                         <div class="ore-header">
                             <div class="ore-icon">
@@ -920,9 +1006,13 @@
                     
                     // Agregar eventos de hover para tooltip
                     oreItem.addEventListener('mouseenter', function() {
-                        const rule = furnaceData.smeltingRules[itemName];
-                        const tooltipText = `${formatItemName(itemName)} → ${formatItemName(rule.result)} (${rule.amount}x per unit)`;
-                        showTooltip(this, tooltipText);
+                        if (this.classList.contains('skill-locked') && !furnaceData.selectedOres[itemName]) {
+                            showTooltip(this, `Need ${furnaceData.availableSlots - selectedCount} more slot(s) available`);
+                        } else {
+                            const rule = furnaceData.smeltingRules[itemName];
+                            const tooltipText = `${formatItemName(itemName)} → ${formatItemName(rule.result)} (${rule.amount}x per unit)`;
+                            showTooltip(this, tooltipText);
+                        }
                     });
                     
                     oreItem.addEventListener('mouseleave', function() {
@@ -932,7 +1022,9 @@
                     // Evento de click para seleccionar/deseleccionar
                     oreItem.addEventListener('click', function(e) {
                         if (!e.target.classList.contains('quantity-btn') && !e.target.classList.contains('quantity-input')) {
-                            toggleOreSelection(itemName);
+                            if (!this.classList.contains('skill-locked') || furnaceData.selectedOres[itemName]) {
+                                toggleOreSelection(itemName);
+                            }
                         }
                     });
                     
@@ -941,6 +1033,173 @@
             }
         }
 
+        function toggleOreSelection(oreName) {
+            const oreItem = document.querySelector(`[data-ore="${oreName}"]`);
+            
+            if (furnaceData.selectedOres[oreName]) {
+                // Deseleccionar
+                delete furnaceData.selectedOres[oreName];
+                oreItem.classList.remove('selected');
+            } else {
+                // Verificar límite de slots disponibles
+                if (Object.keys(furnaceData.selectedOres).length >= furnaceData.availableSlots) {
+                    return;
+                }
+                
+                // Seleccionar con cantidad por defecto
+                const quantityInput = document.getElementById(`ore_${oreName}`);
+                const quantity = parseInt(quantityInput.value) || 1;
+                furnaceData.selectedOres[oreName] = quantity;
+                oreItem.classList.add('selected');
+            }
+            
+            // Actualizar el estado de otros ores
+            setupOreSelection();
+            updateInputSlots();
+            updateOutputPreview();
+            updateUI();
+        }
+
+        function adjustOreQuantity(oreName, change) {
+            const input = document.getElementById(`ore_${oreName}`);
+            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
+            
+            let newValue = parseInt(input.value) + change;
+            newValue = Math.max(1, Math.min(newValue, maxAmount));
+            
+            input.value = newValue;
+            updateOreQuantity(oreName);
+        }
+
+        function updateOreQuantity(oreName) {
+            const input = document.getElementById(`ore_${oreName}`);
+            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
+            
+            let value = parseInt(input.value) || 1;
+            value = Math.max(1, Math.min(value, maxAmount));
+            
+            input.value = value;
+            
+            // Si el ore está seleccionado, actualizar la cantidad
+            if (furnaceData.selectedOres[oreName]) {
+                furnaceData.selectedOres[oreName] = value;
+                updateInputSlots();
+                updateOutputPreview();
+                updateUI();
+            }
+        }
+
+        function updateInputSlots() {
+            const inputSlots = document.querySelectorAll('#inputSlots .slot');
+            
+            // Primero restablecer todos los slots
+            setupInputSlots();
+            
+            let slotIndex = 0;
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                // Buscar el próximo slot disponible
+                while (slotIndex < 5 && !isSlotAvailable(slotIndex + 1)) {
+                    slotIndex++;
+                }
+                
+                if (slotIndex >= 5) break; // No hay más slots disponibles
+                
+                const slot = inputSlots[slotIndex];
+                slot.classList.remove('skill-locked');
+                slot.classList.add('has-item');
+                slot.innerHTML = `
+                    <div class="slot-item">
+                        <div class="slot-icon">
+                            <img src="nui://inventory_images/images/${ore}.webp" alt="${ore}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
+                        </div>
+                        <span class="slot-count">x${amount}</span>
+                    </div>
+                `;
+                
+                slotIndex++;
+            }
+        }
+
+        function updateOutputPreview() {
+            const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            
+            // Limpiar slots que no tienen items procesados
+            outputSlots.forEach((slot, index) => {
+                if (index >= Object.keys(furnaceData.outputItems).length) {
+                    slot.innerHTML = '';
+                    slot.classList.remove('has-item');
+                }
+            });
+            
+            // Mostrar items ya procesados primero
+            let slotIndex = Object.keys(furnaceData.outputItems).length;
+            
+            furnaceData.currentOutput = {};
+            
+            // Calcular output basado en los ores seleccionados con sus cantidades
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                const rule = furnaceData.smeltingRules[ore];
+                if (rule) {
+                    const outputAmount = rule.amount * amount;
+                    if (furnaceData.currentOutput[rule.result]) {
+                        furnaceData.currentOutput[rule.result] += outputAmount;
+                    } else {
+                        furnaceData.currentOutput[rule.result] = outputAmount;
+                    }
+                }
+            }
+            
+            // Mostrar preview del output
+            for (const [item, amount] of Object.entries(furnaceData.currentOutput)) {
+                if (slotIndex >= 10) break;
+                
+                const slot = outputSlots[slotIndex];
+                slot.classList.add('has-item');
+                slot.style.opacity = '0.6'; // Para indicar que es un preview
+                slot.innerHTML = `
+                    <div class="slot-item">
+                        <div class="slot-icon">
+                            <img src="nui://inventory_images/images/${item}.webp" alt="${item}" onerror="this.style.display='none'; this.parentElement.innerHTML='🔧'">
+                        </div>
+                        <span class="slot-count">x${amount}</span>
+                    </div>
+                `;
+                
+                slotIndex++;
+            }
+        }
+
+        // Función para mostrar información de skills en el botón
+        function updateUI() {
+            const turnOnBtn = document.getElementById('turnOnBtn');
+            const hasOres = Object.keys(furnaceData.selectedOres).length > 0;
+            const hasFuel = furnaceData.selectedFuel && furnaceData.selectedFuelAmount > 0;
+            
+            // Calcular combustible necesario total
+            let totalFuelNeeded = 0;
+            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
+                const rule = furnaceData.smeltingRules[ore];
+                if (rule) {
+                    totalFuelNeeded += rule.fuel_needed * amount;
+                }
+            }
+            
+            const canSmelt = hasOres && hasFuel && furnaceData.selectedFuelAmount >= totalFuelNeeded;
+            turnOnBtn.disabled = !canSmelt;
+            
+            if (!canSmelt && totalFuelNeeded > 0 && hasFuel) {
+                const needed = totalFuelNeeded - furnaceData.selectedFuelAmount;
+                if (needed > 0) {
+                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${needed} MORE FUEL`;
+                } else {
+                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
+                }
+            } else {
+                turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE (${furnaceData.availableSlots} slots)`;
+            }
+        }
+
+        // Resto de funciones permanecen igual...
         function toggleFuelSelector() {
             const selector = document.getElementById('fuelSelector');
             selector.innerHTML = '';
@@ -1017,164 +1276,6 @@
                 </div>
                 <span class="slot-count">x${furnaceData.selectedFuelAmount}</span>
             `;
-        }
-
-        function toggleOreSelection(oreName) {
-            const oreItem = document.querySelector(`[data-ore="${oreName}"]`);
-            
-            if (furnaceData.selectedOres[oreName]) {
-                // Deseleccionar
-                delete furnaceData.selectedOres[oreName];
-                oreItem.classList.remove('selected');
-            } else {
-                // Verificar límite de 5 slots
-                if (Object.keys(furnaceData.selectedOres).length >= 5) {
-                    return;
-                }
-                
-                // Seleccionar con cantidad por defecto
-                const quantityInput = document.getElementById(`ore_${oreName}`);
-                const quantity = parseInt(quantityInput.value) || 1;
-                furnaceData.selectedOres[oreName] = quantity;
-                oreItem.classList.add('selected');
-            }
-            
-            updateInputSlots();
-            updateOutputPreview();
-            updateUI();
-        }
-
-        function adjustOreQuantity(oreName, change) {
-            const input = document.getElementById(`ore_${oreName}`);
-            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
-            
-            let newValue = parseInt(input.value) + change;
-            newValue = Math.max(1, Math.min(newValue, maxAmount));
-            
-            input.value = newValue;
-            updateOreQuantity(oreName);
-        }
-
-        function updateOreQuantity(oreName) {
-            const input = document.getElementById(`ore_${oreName}`);
-            const maxAmount = parseInt(document.querySelector(`[data-ore="${oreName}"]`).getAttribute('data-max-amount'));
-            
-            let value = parseInt(input.value) || 1;
-            value = Math.max(1, Math.min(value, maxAmount));
-            
-            input.value = value;
-            
-            // Si el ore está seleccionado, actualizar la cantidad
-            if (furnaceData.selectedOres[oreName]) {
-                furnaceData.selectedOres[oreName] = value;
-                updateInputSlots();
-                updateOutputPreview();
-                updateUI();
-            }
-        }
-
-        function updateInputSlots() {
-            const inputSlots = document.querySelectorAll('#inputSlots .slot');
-            inputSlots.forEach(slot => {
-                slot.innerHTML = '';
-                slot.classList.remove('has-item');
-            });
-            
-            let slotIndex = 0;
-            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
-                if (slotIndex >= 5) break;
-                
-                const slot = inputSlots[slotIndex];
-                slot.classList.add('has-item');
-                slot.innerHTML = `
-                    <div class="slot-item">
-                        <div class="slot-icon">
-                            <img src="nui://inventory_images/images/${ore}.webp" alt="${ore}" onerror="this.style.display='none'; this.parentElement.innerHTML='⛏️'">
-                        </div>
-                        <span class="slot-count">x${amount}</span>
-                    </div>
-                `;
-                
-                slotIndex++;
-            }
-        }
-
-        function updateOutputPreview() {
-            const outputSlots = document.querySelectorAll('#outputSlots .slot');
-            
-            // Limpiar slots que no tienen items procesados
-            outputSlots.forEach((slot, index) => {
-                if (index >= Object.keys(furnaceData.outputItems).length) {
-                    slot.innerHTML = '';
-                    slot.classList.remove('has-item');
-                }
-            });
-            
-            // Mostrar items ya procesados primero
-            let slotIndex = Object.keys(furnaceData.outputItems).length;
-            
-            furnaceData.currentOutput = {};
-            
-            // Calcular output basado en los ores seleccionados con sus cantidades
-            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
-                const rule = furnaceData.smeltingRules[ore];
-                if (rule) {
-                    const outputAmount = rule.amount * amount;
-                    if (furnaceData.currentOutput[rule.result]) {
-                        furnaceData.currentOutput[rule.result] += outputAmount;
-                    } else {
-                        furnaceData.currentOutput[rule.result] = outputAmount;
-                    }
-                }
-            }
-            
-            // Mostrar preview del output
-            for (const [item, amount] of Object.entries(furnaceData.currentOutput)) {
-                if (slotIndex >= 10) break;
-                
-                const slot = outputSlots[slotIndex];
-                slot.classList.add('has-item');
-                slot.style.opacity = '0.6'; // Para indicar que es un preview
-                slot.innerHTML = `
-                    <div class="slot-item">
-                        <div class="slot-icon">
-                            <img src="nui://inventory_images/images/${item}.webp" alt="${item}" onerror="this.style.display='none'; this.parentElement.innerHTML='🔧'">
-                        </div>
-                        <span class="slot-count">x${amount}</span>
-                    </div>
-                `;
-                
-                slotIndex++;
-            }
-        }
-
-        function updateUI() {
-            const turnOnBtn = document.getElementById('turnOnBtn');
-            const hasOres = Object.keys(furnaceData.selectedOres).length > 0;
-            const hasFuel = furnaceData.selectedFuel && furnaceData.selectedFuelAmount > 0;
-            
-            // Calcular combustible necesario total
-            let totalFuelNeeded = 0;
-            for (const [ore, amount] of Object.entries(furnaceData.selectedOres)) {
-                const rule = furnaceData.smeltingRules[ore];
-                if (rule) {
-                    totalFuelNeeded += rule.fuel_needed * amount;
-                }
-            }
-            
-            const canSmelt = hasOres && hasFuel && furnaceData.selectedFuelAmount >= totalFuelNeeded;
-            turnOnBtn.disabled = !canSmelt;
-            
-            if (!canSmelt && totalFuelNeeded > 0 && hasFuel) {
-                const needed = totalFuelNeeded - furnaceData.selectedFuelAmount;
-                if (needed > 0) {
-                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${needed} MORE FUEL`;
-                } else {
-                    turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
-                }
-            } else {
-                turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
-            }
         }
 
         function startSmelting() {

@@ -516,16 +516,26 @@
         .fuel-slot.has-fuel {
             box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
         }
+        .btn-refresh {
+            background: #3A5F98;
+            border-color: #4A6FA8;
+        }
+
+        .btn-refresh:hover {
+            background: #4A6FA8;
+            border-color: #5A7FB8;
+        }
     </style>
 </head>
 <body>
     <div class="furnace-container" id="furnaceContainer">
         <div class="furnace-header">
             <h1 class="furnace-title">WASTELAND FORGE</h1>
-            <!-- <div class="header-actions">
-                <button class="btn-header btn-take-ore" onclick="takeOre()">TAKE ORE</button>
-                <button class="btn-header btn-take-all" onclick="takeAll()">TAKE ALL</button>
-            </div> -->
+             <div class="header-actions">
+                <button class="btn-header btn-refresh" onclick="refreshUI()">
+                    <span class="refresh-icon">🔄</span> LIMPIAR
+                </button>
+            </div> 
             <button class="close-btn" onclick="closeFurnace()">✕</button>
         </div>
         
@@ -632,6 +642,87 @@
 
         function hideTooltip() {
             document.getElementById('tooltip').classList.remove('show');
+        }
+ // Función para refrescar la UI
+ function refreshUI() {
+            const refreshBtn = document.querySelector('.btn-refresh');
+            
+            // Agregar efecto visual de refresh
+            refreshBtn.classList.add('refreshing');
+            
+            setTimeout(() => {
+                refreshBtn.classList.remove('refreshing');
+            }, 500);
+            
+            // Resetear todos los inputs y selecciones
+            resetAllInputs();
+            
+            // Solicitar datos actualizados del servidor
+            fetch(`https://${GetParentResourceName()}/refreshUI`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({})
+            }).then(response => {
+                // La respuesta se manejará a través de eventos de mensajes
+                console.log('Refresh solicitado al servidor');
+            }).catch(error => {
+                console.error('Error al refrescar UI:', error);
+            });
+        }
+
+        // Función para resetear todos los inputs
+        function resetAllInputs() {
+            // Limpiar combustible seleccionado
+            furnaceData.selectedFuel = null;
+            furnaceData.selectedFuelAmount = 0;
+            furnaceData.selectedOres = {};
+            furnaceData.currentOutput = {};
+            
+            // Resetear slot de combustible
+            const fuelSlot = document.getElementById('fuelSlot');
+            const fuelDisplay = document.getElementById('fuelDisplay');
+            fuelSlot.classList.remove('has-fuel');
+            fuelDisplay.innerHTML = `
+                <div class="slot-icon">🔥</div>
+            `;
+            
+            // Cerrar selector de combustible
+            document.getElementById('fuelSelector').classList.remove('show');
+            
+            // Limpiar selecciones de minerales
+            const oreOptions = document.querySelectorAll('.ore-option');
+            oreOptions.forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Limpiar slots de input
+            const inputSlots = document.querySelectorAll('#inputSlots .slot');
+            inputSlots.forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('has-item');
+            });
+            
+            // Limpiar preview de output (mantener items ya procesados)
+            const outputSlots = document.querySelectorAll('#outputSlots .slot');
+            outputSlots.forEach((slot, index) => {
+                if (index >= Object.keys(furnaceData.outputItems).length) {
+                    slot.innerHTML = '';
+                    slot.classList.remove('has-item');
+                    slot.style.opacity = '1';
+                }
+            });
+            
+            // Actualizar botón de encendido
+            const turnOnBtn = document.getElementById('turnOnBtn');
+            turnOnBtn.disabled = true;
+            turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> TURN ON`;
+            
+            // Ocultar tooltip
+            hideTooltip();
+            
+            console.log('UI reseteada completamente');
         }
 
         // Event listener para mensajes

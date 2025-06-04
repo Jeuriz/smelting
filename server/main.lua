@@ -681,48 +681,48 @@ lib.addCommand('smeltdebug', {
     end
 end)
 
--- Comando para limpiar datos de un jugador (admin)
-lib.addCommand('smeltclear', {
-    help = 'Clear smelting data for a player (admin only)',
-    restricted = 'group.admin',
-    params = {
-        {
-            name = 'target',
-            type = 'playerId',
-            help = 'Target player ID'
-        }
-    }
-}, function(source, args, raw)
-    local targetId = args.target
-    local targetIdStr = tostring(targetId)
+-- -- Comando para limpiar datos de un jugador (admin)
+-- lib.addCommand('smeltclear', {
+--     help = 'Clear smelting data for a player (admin only)',
+--     restricted = 'group.admin',
+--     params = {
+--         {
+--             name = 'target',
+--             type = 'playerId',
+--             help = 'Target player ID'
+--         }
+--     }
+-- }, function(source, args, raw)
+--     local targetId = args.target
+--     local targetIdStr = tostring(targetId)
     
-    if smeltingProcesses[targetIdStr] then
-        smeltingProcesses[targetIdStr] = nil
-        print("^3[Smelting]^7 Cleared active process for player " .. targetId)
-    end
+--     if smeltingProcesses[targetIdStr] then
+--         smeltingProcesses[targetIdStr] = nil
+--         print("^3[Smelting]^7 Cleared active process for player " .. targetId)
+--     end
     
-    if furnaceStorage[targetIdStr] then
-        furnaceStorage[targetIdStr] = nil
-        print("^3[Smelting]^7 Cleared furnace storage for player " .. targetId)
-    end
+--     if furnaceStorage[targetIdStr] then
+--         furnaceStorage[targetIdStr] = nil
+--         print("^3[Smelting]^7 Cleared furnace storage for player " .. targetId)
+--     end
     
-    if playerCooldowns[targetIdStr] then
-        playerCooldowns[targetIdStr] = nil
-        print("^3[Smelting]^7 Cleared cooldown for player " .. targetId)
-    end
+--     if playerCooldowns[targetIdStr] then
+--         playerCooldowns[targetIdStr] = nil
+--         print("^3[Smelting]^7 Cleared cooldown for player " .. targetId)
+--     end
     
-    -- Limpiar cache del jugador
-    for key, _ in pairs(itemsCache) do
-        if string.find(key, targetId .. "_") then
-            itemsCache[key] = nil
-        end
-    end
+--     -- Limpiar cache del jugador
+--     for key, _ in pairs(itemsCache) do
+--         if string.find(key, targetId .. "_") then
+--             itemsCache[key] = nil
+--         end
+--     end
     
-    TriggerClientEvent('smelting:notify', source, 'Cleared smelting data for player ' .. targetId, 'success')
+--     TriggerClientEvent('smelting:notify', source, 'Cleared smelting data for player ' .. targetId, 'success')
     
-    -- Notificar al jugador objetivo si está conectado
-    if GetPlayerName(targetId) then
-        TriggerClientEvent('smelting:notify', targetId, 'Your smelting data has been cleared by an admin', 'info')
-        TriggerClientEvent('smelting:processCompleted', targetId)
-    end
-end)
+--     -- Notificar al jugador objetivo si está conectado
+--     if GetPlayerName(targetId) then
+--         TriggerClientEvent('smelting:notify', targetId, 'Your smelting data has been cleared by an admin', 'info')
+--         TriggerClientEvent('smelting:processCompleted', targetId)
+--     end
+-- end)

@@ -259,6 +259,80 @@ function CompleteSmeltingProcess(playerId)
     end
 end
 
+-- Función para verificar skills del jugador
+local function GetPlayerSkills(source)
+    local skills = {}
+    
+    -- Verificar cada skill requerida para los slots
+    for slot, skillName in pairs(Config.SlotSkills) do
+        if skillName then
+            -- Usar el sistema de skill-tree para verificar si la skill está desbloqueada
+            local success, result = pcall(function()
+                return exports['skill-tree']:IsSkillUnlocked(source, skillName)
+            end)
+            
+            if success then
+                skills[skillName] = result or false
+            else
+                -- Si hay error, asumir que no tiene la skill
+                skills[skillName] = false
+                print(string.format("^1[Smelting]^7 Error checking skill %s for player %s: %s", skillName, source, result or "unknown"))
+            end
+        end
+    end
+    
+    return skills
+end
+
+-- Función para verificar si un jugador puede usar un slot específico
+local function CanUseSlot(source, slotNumber)
+    local requiredSkill = Config.SlotSkills[slotNumber]
+    
+    -- Si no requiere skill, siempre puede usarlo
+    if not requiredSkill then
+        return true
+    end
+    
+    -- Verificar si tiene la skill
+    local success, hasSkill = pcall(function()
+        return exports['skill-tree']:IsSkillUnlocked(source, requiredSkill)
+    end)
+    
+    if success then
+        return hasSkill or false
+    else
+        print(string.format("^1[Smelting]^7 Error checking skill %s for player %s", requiredSkill, source))
+        return false
+    end
+end
+
+-- Función para validar que los items seleccionados respeten las skills
+local function ValidateSelectedItems(source, selectedItems)
+    local availableSlots = 0
+    
+    -- Contar slots disponibles basado en skills
+    for slot = 1, 5 do
+        if CanUseSlot(source, slot) then
+            availableSlots = availableSlots + 1
+        end
+    end
+    
+    -- Verificar que no se excedan los slots disponibles
+    local selectedCount = 0
+    for item, amount in pairs(selectedItems) do
+        if amount > 0 then
+            selectedCount = selectedCount + 1
+        end
+    end
+    
+    if selectedCount > availableSlots then
+        return false, string.format("You can only use %d slots with your current skills", availableSlots)
+    end
+    
+    return true, nil
+end
+
+
 -- Callback con ox_lib para obtener items del jugador
 -- Callback para obtener items del jugador (actualizado para mostrar solo items en almacenamiento)
 lib.callback.register('smelting:getPlayerItems', function(source)

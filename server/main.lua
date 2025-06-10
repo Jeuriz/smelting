@@ -266,9 +266,9 @@ local function GetPlayerSkills(source)
     -- Verificar cada skill requerida para los slots
     for slot, skillName in pairs(Config.SlotSkills) do
         if skillName then
-            -- Usar el sistema de skill-tree para verificar si la skill está desbloqueada
+            -- Usar el sistema de devhub_skillTree para verificar si la skill está desbloqueada
             local success, result = pcall(function()
-                return exports['skill-tree']:IsSkillUnlocked(source, skillName)
+                return exports['devhub_skillTree']:hasUnlockedSkill('personal', skillName, source)
             end)
             
             if success then
@@ -295,7 +295,7 @@ local function CanUseSlot(source, slotNumber)
     
     -- Verificar si tiene la skill
     local success, hasSkill = pcall(function()
-        return exports['skill-tree']:IsSkillUnlocked(source, requiredSkill)
+        return exports['devhub_skillTree']:hasUnlockedSkill('personal', requiredSkill, source)
     end)
     
     if success then
@@ -332,16 +332,16 @@ local function ValidateSelectedItems(source, selectedItems)
     return true, nil
 end
 
-
--- Callback con ox_lib para obtener items del jugador
--- Callback para obtener items del jugador (actualizado para mostrar solo items en almacenamiento)
+-- Callback con ox_lib para obtener items del jugador (ACTUALIZADO CON SKILL LABELS)
 lib.callback.register('smelting:getPlayerItems', function(source)
     local items = {}
     local fuel = {}
     local outputItems = {}
+    local playerSkills = {}
+    local skillLabels = {}
     
     if not source then
-        return items, fuel, outputItems
+        return items, fuel, outputItems, playerSkills, skillLabels
     end
     
     local sourceStr = tostring(source)
@@ -371,7 +371,13 @@ lib.callback.register('smelting:getPlayerItems', function(source)
         outputItems = furnaceStorage[sourceStr]
     end
     
-    return items, fuel, outputItems
+    -- Obtener skills del jugador
+    playerSkills = GetPlayerSkills(source)
+    
+    -- Enviar labels de skills
+    skillLabels = Config.SkillLabels or {}
+    
+    return items, fuel, outputItems, playerSkills, skillLabels
 end)
 
 -- Callbacks simplificados para take (solo para casos especiales donde el inventario estaba lleno)
@@ -751,71 +757,34 @@ lib.addCommand('smeltdebug', {
             end
         end
         
+        -- Verificar skills del jugador
+        local playerSkills = GetPlayerSkills(source)
+        print("^3[Smelting Debug]^7 === PLAYER SKILLS ===")
+        for skill, unlocked in pairs(playerSkills) do
+            local label = Config.SkillLabels[skill] or skill
+            print("^2[Smelting Debug]^7 " .. label .. " (" .. skill .. "): " .. tostring(unlocked))
+        end
+        
         TriggerClientEvent('smelting:notify', source, 'Check server console for debug info', 'info')
     end
 end)
-
--- -- Comando para limpiar datos de un jugador (admin)
--- lib.addCommand('smeltclear', {
---     help = 'Clear smelting data for a player (admin only)',
---     restricted = 'group.admin',
---     params = {
---         {
---             name = 'target',
---             type = 'playerId',
---             help = 'Target player ID'
---         }
---     }
--- }, function(source, args, raw)
---     local targetId = args.target
---     local targetIdStr = tostring(targetId)
-    
---     if smeltingProcesses[targetIdStr] then
---         smeltingProcesses[targetIdStr] = nil
---         print("^3[Smelting]^7 Cleared active process for player " .. targetId)
---     end
-    
---     if furnaceStorage[targetIdStr] then
---         furnaceStorage[targetIdStr] = nil
---         print("^3[Smelting]^7 Cleared furnace storage for player " .. targetId)
---     end
-    
---     if playerCooldowns[targetIdStr] then
---         playerCooldowns[targetIdStr] = nil
---         print("^3[Smelting]^7 Cleared cooldown for player " .. targetId)
---     end
-    
---     -- Limpiar cache del jugador
---     for key, _ in pairs(itemsCache) do
---         if string.find(key, targetId .. "_") then
---             itemsCache[key] = nil
---         end
---     end
-    
---     TriggerClientEvent('smelting:notify', source, 'Cleared smelting data for player ' .. targetId, 'success')
-    
---     -- Notificar al jugador objetivo si está conectado
---     if GetPlayerName(targetId) then
---         TriggerClientEvent('smelting:notify', targetId, 'Your smelting data has been cleared by an admin', 'info')
---         TriggerClientEvent('smelting:processCompleted', targetId)
---     end
--- end)
-
--- Agregar este callback al final del archivo server/main.lua
 
 -- Callback NUI para refrescar la UI
 RegisterNetEvent('__cfx_nui:refreshUI', function()
     local source = source
     if not source then return end
     
-    -- Obtener datos actualizados del jugador
-    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems)
+    -- Obtener datos actualizados del jugador con skill labels
+    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills, skillLabels)
         -- Enviar datos actualizados a la UI
         TriggerClientEvent('smelting:refreshUIData', source, {
             items = items,
             fuel = fuel,
             outputItems = outputItems,
-            smeltingRules = Config.SmeltingRules
+            smeltingRules = Config.SmeltingRules,
+            playerSkills = playerSkills,
+            skillLabels = skillLabels,
+            slotSkills = Config.SlotSkills
         })
     end, source)
 end)

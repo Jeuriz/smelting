@@ -199,7 +199,7 @@ function StartProgressUI(totalTime, isResuming)
     progressActive = false
 end
 
--- Función para abrir la UI mejorada con skills
+-- Función para abrir la UI mejorada con skills y labels
 function OpenSmeltingUI()
     if activeProcess then
         lib.notify({
@@ -215,7 +215,7 @@ function OpenSmeltingUI()
         return
     end
     
-    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills)
+    lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills, skillLabels)
         SetNuiFocus(true, true)
         isSmeltingOpen = true
         SendNUIMessage({
@@ -225,10 +225,12 @@ function OpenSmeltingUI()
             outputItems = outputItems,
             smeltingRules = Config.SmeltingRules,
             playerSkills = playerSkills or {},
+            skillLabels = skillLabels or {},
             slotSkills = Config.SlotSkills
         })
     end)
 end
+
 -- Función para cerrar la UI
 function CloseSmeltingUI()
     SetNuiFocus(false, false)
@@ -294,11 +296,11 @@ RegisterNUICallback('takeAll', function(data, cb)
     cb('ok')
 end)
 
--- Callback NUI para refrescar UI (CORREGIDO) con skills
+-- Callback NUI para refrescar UI (ACTUALIZADO CON SKILL LABELS)
 RegisterNUICallback('refreshUI', function(data, cb)
     if isSmeltingOpen then
-        -- Solicitar datos actualizados del servidor incluyendo skills
-        lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills)
+        -- Solicitar datos actualizados del servidor incluyendo skills y labels
+        lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills, skillLabels)
             -- Enviar datos actualizados a la UI con la acción correcta
             SendNUIMessage({
                 action = "refreshComplete",
@@ -307,12 +309,14 @@ RegisterNUICallback('refreshUI', function(data, cb)
                 outputItems = outputItems,
                 smeltingRules = Config.SmeltingRules,
                 playerSkills = playerSkills or {},
+                skillLabels = skillLabels or {},
                 slotSkills = Config.SlotSkills
             })
         end)
     end
     cb('ok')
 end)
+
 -- Event handlers
 RegisterNetEvent('smelting:notify', function(message, type)
     lib.notify({
@@ -329,7 +333,7 @@ RegisterNetEvent('smelting:processCompleted', function()
     StopWorkingAnimation()
 end)
 
--- Event handler para datos de refresh (MANTENER PARA COMPATIBILIDAD) con skills
+-- Event handler para datos de refresh (ACTUALIZADO CON SKILL LABELS)
 RegisterNetEvent('smelting:refreshUIData', function(data)
     if isSmeltingOpen then
         SendNUIMessage({
@@ -339,6 +343,7 @@ RegisterNetEvent('smelting:refreshUIData', function(data)
             outputItems = data.outputItems,
             smeltingRules = data.smeltingRules,
             playerSkills = data.playerSkills or {},
+            skillLabels = data.skillLabels or {},
             slotSkills = data.slotSkills or Config.SlotSkills
         })
     end

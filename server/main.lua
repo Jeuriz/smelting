@@ -53,6 +53,14 @@ local function GetItemCount(source, itemName)
     return count
 end
 
+-- Función para formatear nombres de items
+local function FormatItemName(itemName)
+    if not itemName then return "Item desconocido" end
+    return itemName:gsub("_", " "):gsub("(%a)([%w_']*)", function(first, rest) 
+        return first:upper()..rest:lower() 
+    end)
+end
+
 -- Limpiar cache periódicamente
 CreateThread(function()
     while true do
@@ -144,21 +152,24 @@ function CompleteSmeltingProcess(playerId)
             local fuelCount = GetItemCount(playerSource, process.fuelType)
             if fuelCount < process.fuelNeeded then
                 hasAllItems = false
-                TriggerClientEvent('smelting:notify', playerSource, 'Insufficient fuel to complete the process', 'error')
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    string.format(Config.Texts['fuel_not_enough'], process.fuelNeeded, FormatItemName(process.fuelType)), 'error')
                 smeltingProcesses[playerIdStr] = nil
-                -- Notificar al cliente que el proceso terminó
                 TriggerClientEvent('smelting:processCompleted', playerSource)
                 return
             end
             
             if not hasAllItems then
-                -- El jugador no tiene los items necesarios (posible intento de abuso)
-                local missingText = "Missing items: "
+                -- El jugador no tiene los items necesarios
+                local missingText = "Faltan materiales: "
                 for item, amount in pairs(missingItems) do
-                    missingText = missingText .. item .. " x" .. amount .. ", "
+                    missingText = missingText .. FormatItemName(item) .. " x" .. amount .. ", "
                 end
                 
-                TriggerClientEvent('smelting:notify', playerSource, 'Process cancelled. ' .. missingText, 'error')
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    Config.Texts['items_moved_during_process'], 'error')
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    missingText:sub(1, -3), 'error')
                 TriggerClientEvent('smelting:processCompleted', playerSource)
                 
                 -- Log para administradores
@@ -172,14 +183,18 @@ function CompleteSmeltingProcess(playerId)
             
             -- Si tiene todos los items, proceder a removerlos
             local allRemoved = true
+            local removedItems = {}
             
             -- Remover items
             for item, amount in pairs(process.itemsToProcess) do
                 local removeSuccess = exports['tgiann-inventory']:RemoveItem(playerSource, item, amount)
                 if removeSuccess then
                     TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, item, "remove", amount)
+                    removedItems[item] = amount
                 else
                     allRemoved = false
+                    TriggerClientEvent('smelting:notify', playerSource, 
+                        string.format(Config.Texts['material_missing_inventory'], FormatItemName(item)), 'error')
                     print(string.format("^1[Smelting]^7 Error removing %s x%d from player %s", item, amount, playerSource))
                 end
             end
@@ -190,10 +205,13 @@ function CompleteSmeltingProcess(playerId)
                 TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, process.fuelType, "remove", process.fuelNeeded)
             else
                 allRemoved = false
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    string.format(Config.Texts['fuel_missing_inventory'], FormatItemName(process.fuelType)), 'error')
             end
             
             if not allRemoved then
-                TriggerClientEvent('smelting:notify', playerSource, 'Error processing some items', 'error')
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    Config.Texts['system_error'], 'error')
                 smeltingProcesses[playerIdStr] = nil
                 TriggerClientEvent('smelting:processCompleted', playerSource)
                 return
@@ -201,29 +219,51 @@ function CompleteSmeltingProcess(playerId)
             
             -- Dar items directamente al inventario automáticamente
             local itemsGiven = false
+            local itemsToStore = {}
+            
             for item, amount in pairs(process.results) do
                 local success = exports['tgiann-inventory']:AddItem(playerSource, item, amount)
                 if success then
                     TriggerClientEvent('tgiann-inventory:client:ItemBox', playerSource, item, "add", amount)
                     itemsGiven = true
                 else
-                    -- Si no se puede dar al inventario, guardar en almacenamiento del horno
-                    if not furnaceStorage[playerIdStr] then
-                        furnaceStorage[playerIdStr] = {}
-                    end
-                    
+                    -- Si no se puede dar al inventario, guardar para almacenar en horno
+                    itemsToStore[item] = amount
+                end
+            end
+            
+            -- Almacenar items que no se pudieron dar
+            if next(itemsToStore) then
+                if not furnaceStorage[playerIdStr] then
+                    furnaceStorage[playerIdStr] = {}
+                end
+                
+                for item, amount in pairs(itemsToStore) do
                     if furnaceStorage[playerIdStr][item] then
                         furnaceStorage[playerIdStr][item] = furnaceStorage[playerIdStr][item] + amount
                     else
                         furnaceStorage[playerIdStr][item] = amount
                     end
                 end
+                
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    Config.Texts['inventory_full_stored'], 'warning')
             end
             
             if itemsGiven then
-                TriggerClientEvent('smelting:notify', playerSource, 'Items automatically added to your inventory!', 'success')
-            else
-                -- Guardar en almacenamiento del horno si el inventario está lleno
+                TriggerClientEvent('smelting:notify', playerSource, 
+                    Config.Texts['smelting_complete'], 'success')
+            end
+            
+            TriggerClientEvent('smelting:processCompleted', playerSource)
+            
+            -- Log exitoso
+            print(string.format("^2[Smelting]^7 Player %s (%s) completed smelting process successfully", 
+                Player.PlayerData.name, Player.PlayerData.citizenid))
+                
+        else
+            -- Jugador desconectado, marcar para auto-completar cuando regrese
+            if process.results then
                 if not furnaceStorage[playerIdStr] then
                     furnaceStorage[playerIdStr] = {}
                 end
@@ -235,20 +275,9 @@ function CompleteSmeltingProcess(playerId)
                         furnaceStorage[playerIdStr][item] = amount
                     end
                 end
-                
-                TriggerClientEvent('smelting:notify', playerSource, 'Inventory full! Items stored in furnace.', 'warning')
             end
             
-            TriggerClientEvent('smelting:notify', playerSource, 'Smelting process completed successfully!', 'success')
-            TriggerClientEvent('smelting:processCompleted', playerSource)
-            
-            -- Log exitoso
-            print(string.format("^2[Smelting]^7 Player %s (%s) completed smelting process successfully", 
-                Player.PlayerData.name, Player.PlayerData.citizenid))
-                
-        else
-            -- Jugador desconectado, cancelar proceso sin dar items
-            print(string.format("^3[Smelting]^7 Process cancelled for disconnected player %s", playerIdStr))
+            print(string.format("^3[Smelting]^7 Process completed for disconnected player %s, items stored", playerIdStr))
         end
         
         -- Limpiar proceso
@@ -326,7 +355,7 @@ local function ValidateSelectedItems(source, selectedItems)
     end
     
     if selectedCount > availableSlots then
-        return false, string.format("You can only use %d slots with your current skills", availableSlots)
+        return false, string.format(Config.Texts['max_slots_reached'], availableSlots)
     end
     
     return true, nil
@@ -383,18 +412,18 @@ end)
 -- Callbacks simplificados para take (solo para casos especiales donde el inventario estaba lleno)
 lib.callback.register('smelting:takeStoredItems', function(source)
     if not source then
-        return false, "System error"
+        return false, Config.Texts['system_error']
     end
     
     local Player = QBCore.Functions.GetPlayer(source)
     if not Player then
-        return false, "Player error"
+        return false, Config.Texts['player_error']
     end
     
     local sourceStr = tostring(source)
     
     if not furnaceStorage[sourceStr] or next(furnaceStorage[sourceStr]) == nil then
-        return false, "No stored items to collect"
+        return false, Config.Texts['no_items_to_collect']
     end
     
     -- Intentar dar todos los items almacenados
@@ -420,18 +449,18 @@ lib.callback.register('smelting:takeStoredItems', function(source)
     local remaining = next(itemsRemaining) ~= nil
     
     if given and not remaining then
-        return true, "All stored items collected"
+        return true, Config.Texts['all_items_collected']
     elseif given and remaining then
-        return true, "Some items collected, inventory still full"
+        return true, "Algunos objetos recolectados, inventario aún lleno"
     else
-        return false, "Inventory full, could not collect items"
+        return false, "Inventario lleno, no se pudieron recolectar objetos"
     end
 end)
 
--- Callback con ox_lib para iniciar proceso (mejorado)
+-- Callback con ox_lib para iniciar proceso (MEJORADO CON VALIDACIONES DETALLADAS)
 lib.callback.register('smelting:startProcess', function(source, selectedItems, fuelAmount, fuelType)
     if not source then
-        return false, "System error"
+        return false, Config.Texts['system_error']
     end
     
     local sourceStr = tostring(source)
@@ -439,27 +468,31 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
     
     -- Verificar cooldown para prevenir spam
     if playerCooldowns[sourceStr] and (now - playerCooldowns[sourceStr]) < 3000 then
-        return false, "Please wait before starting another process"
+        return false, Config.Texts['process_cooldown']
     end
     
     local Player = QBCore.Functions.GetPlayer(source)
     if not Player then 
-        return false, "Player error"
+        return false, Config.Texts['player_error']
     end
     
     -- Verificar si ya tiene un proceso activo
     if smeltingProcesses[sourceStr] and smeltingProcesses[sourceStr].active then
-        return false, "You already have an active smelting process"
+        return false, Config.Texts['process_in_progress']
     end
     
-    -- Validar parámetros
-    if not selectedItems or not fuelAmount or not fuelType then
-        return false, "Invalid parameters"
+    -- Validar parámetros básicos
+    if not selectedItems or type(selectedItems) ~= "table" or not next(selectedItems) then
+        return false, Config.Texts['need_materials_selected']
+    end
+    
+    if not fuelType or fuelType == "" then
+        return false, Config.Texts['need_fuel_selected']
     end
     
     fuelAmount = tonumber(fuelAmount) or 0
     if fuelAmount <= 0 then
-        return false, "Invalid fuel amount"
+        return false, Config.Texts['fuel_amount_invalid']
     end
     
     -- Limpiar cache antes de verificar
@@ -469,17 +502,28 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         end
     end
     
-    -- Verificar combustible
+    -- Verificar combustible PRIMERO
     local fuelCount = GetItemCount(source, fuelType)
-    if fuelCount < fuelAmount then
-        return false, 'Insufficient fuel'
+    if fuelCount <= 0 then
+        return false, string.format(Config.Texts['fuel_missing_inventory'], FormatItemName(fuelType))
     end
     
-    -- Verificar materiales y calcular resultados
+    if fuelCount < fuelAmount then
+        return false, string.format(Config.Texts['fuel_not_enough'], fuelAmount, FormatItemName(fuelType))
+    end
+    
+    -- Validar items seleccionados respecto a skills
+    local skillValidation, skillError = ValidateSelectedItems(source, selectedItems)
+    if not skillValidation then
+        return false, skillError
+    end
+    
+    -- Verificar materiales DETALLADAMENTE y calcular resultados
     local totalTime = 0
     local results = {}
     local totalFuelNeeded = 0
     local itemsToProcess = {} -- Guardar items para verificar al final
+    local materialErrors = {}
     
     for item, amount in pairs(selectedItems) do
         if item and amount and Config.SmeltingRules and Config.SmeltingRules[item] then
@@ -487,32 +531,63 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
             if amount > 0 then
                 local itemCount = GetItemCount(source, item)
                 
-                if itemCount < amount then
-                    return false, 'Insufficient materials: ' .. item
-                end
-                
-                local rule = Config.SmeltingRules[item]
-                if rule and rule.time and rule.fuel_needed and rule.result and rule.amount then
-                    totalTime = totalTime + (rule.time * amount)
-                    totalFuelNeeded = totalFuelNeeded + (rule.fuel_needed * amount)
-                    
-                    local resultAmount = rule.amount * amount
-                    if results[rule.result] then
-                        results[rule.result] = results[rule.result] + resultAmount
-                    else
-                        results[rule.result] = resultAmount
+                -- Verificar si tiene el item
+                if itemCount <= 0 then
+                    materialErrors[#materialErrors + 1] = string.format(
+                        Config.Texts['material_missing_inventory'], FormatItemName(item)
+                    )
+                elseif itemCount < amount then
+                    materialErrors[#materialErrors + 1] = string.format(
+                        Config.Texts['material_not_enough'], FormatItemName(item), amount, itemCount
+                    )
+                else
+                    -- Material válido, procesar
+                    local rule = Config.SmeltingRules[item]
+                    if rule and rule.time and rule.fuel_needed and rule.result and rule.amount then
+                        totalTime = totalTime + (rule.time * amount)
+                        totalFuelNeeded = totalFuelNeeded + (rule.fuel_needed * amount)
+                        
+                        local resultAmount = rule.amount * amount
+                        if results[rule.result] then
+                            results[rule.result] = results[rule.result] + resultAmount
+                        else
+                            results[rule.result] = resultAmount
+                        end
+                        
+                        -- Guardar para verificar al final
+                        itemsToProcess[item] = amount
                     end
-                    
-                    -- Guardar para verificar al final
-                    itemsToProcess[item] = amount
                 end
             end
         end
     end
     
-    -- Verificar si tiene suficiente combustible
+    -- Si hay errores de materiales, reportarlos
+    if #materialErrors > 0 then
+        for _, error in ipairs(materialErrors) do
+            TriggerClientEvent('smelting:notify', source, error, 'error')
+        end
+        return false, "Revisa los materiales necesarios"
+    end
+    
+    -- Verificar si no hay items válidos para procesar
+    if next(itemsToProcess) == nil then
+        return false, Config.Texts['no_materials']
+    end
+    
+    -- Verificar si tiene suficiente combustible para TODO el proceso
     if fuelAmount < totalFuelNeeded then
-        return false, string.format('Need %d more fuel for this process', totalFuelNeeded - fuelAmount)
+        local shortage = totalFuelNeeded - fuelAmount
+        TriggerClientEvent('smelting:notify', source, 
+            string.format(Config.Texts['total_fuel_needed'], totalFuelNeeded), 'info')
+        TriggerClientEvent('smelting:notify', source, 
+            string.format(Config.Texts['fuel_shortage'], shortage), 'error')
+        return false, string.format(Config.Texts['fuel_shortage'], shortage)
+    end
+    
+    -- Verificar disponibilidad final de combustible
+    if fuelCount < totalFuelNeeded then
+        return false, string.format(Config.Texts['fuel_not_enough'], totalFuelNeeded, FormatItemName(fuelType))
     end
     
     -- Establecer cooldown
@@ -531,8 +606,12 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
     }
     
     -- Log de inicio de proceso
-    print(string.format("^2[Smelting]^7 Player %s (%s) started smelting process (%.1fs)", 
-        Player.PlayerData.name, Player.PlayerData.citizenid, totalTime / 1000))
+    print(string.format("^2[Smelting]^7 Player %s (%s) started smelting process (%.1fs, %d fuel needed)", 
+        Player.PlayerData.name, Player.PlayerData.citizenid, totalTime / 1000, totalFuelNeeded))
+    
+    -- Notificar al jugador sobre el combustible que se usará
+    TriggerClientEvent('smelting:notify', source, 
+        string.format("Combustible a usar: %d unidades de %s", totalFuelNeeded, FormatItemName(fuelType)), 'info')
     
     -- Iniciar timer
     CreateThread(function()
@@ -542,24 +621,24 @@ lib.callback.register('smelting:startProcess', function(source, selectedItems, f
         end
     end)
     
-    return true, 'Process started', totalTime
+    return true, Config.Texts['smelting_started'], totalTime
 end)
 
 -- Callback para tomar solo minerales procesados
 lib.callback.register('smelting:takeOre', function(source)
     if not source then
-        return false, "System error"
+        return false, Config.Texts['system_error']
     end
     
     local Player = QBCore.Functions.GetPlayer(source)
     if not Player then
-        return false, "Player error"
+        return false, Config.Texts['player_error']
     end
     
     local sourceStr = tostring(source)
     
     if not furnaceStorage[sourceStr] or next(furnaceStorage[sourceStr]) == nil then
-        return false, "No processed materials to collect"
+        return false, Config.Texts['no_items_to_collect']
     end
     
     -- Dar solo los minerales procesados (no combustibles)
@@ -598,24 +677,24 @@ lib.callback.register('smelting:takeOre', function(source)
         end
     end
     
-    return given, given and "Materials collected" or "Could not collect materials"
+    return given, given and Config.Texts['materials_collected'] or "No se pudieron recolectar materiales"
 end)
 
 -- Callback para tomar todo
 lib.callback.register('smelting:takeAll', function(source)
     if not source then
-        return false, "System error"
+        return false, Config.Texts['system_error']
     end
     
     local Player = QBCore.Functions.GetPlayer(source)
     if not Player then
-        return false, "Player error"
+        return false, Config.Texts['player_error']
     end
     
     local sourceStr = tostring(source)
     
     if not furnaceStorage[sourceStr] or next(furnaceStorage[sourceStr]) == nil then
-        return false, "No items to collect"
+        return false, Config.Texts['no_items_to_collect']
     end
     
     -- Dar todos los items
@@ -635,7 +714,7 @@ lib.callback.register('smelting:takeAll', function(source)
         furnaceStorage[sourceStr] = {}
     end
     
-    return given, given and "All items collected" or "Could not collect items"
+    return given, given and Config.Texts['all_items_collected'] or "No se pudieron recolectar objetos"
 end)
 
 -- Callback con ox_lib para obtener estado del proceso (mejorado)
@@ -689,7 +768,7 @@ RegisterNetEvent('smelting:cancelProcess', function()
     
     if smeltingProcesses[sourceStr] and Player then
         -- No devolver nada ya que no se removieron items al inicio
-        TriggerClientEvent('smelting:notify', source, 'Smelting process cancelled', 'info')
+        TriggerClientEvent('smelting:notify', source, Config.Texts['process_cancelled'], 'info')
         TriggerClientEvent('smelting:processCompleted', source)
         
         -- Log de cancelación
@@ -765,7 +844,7 @@ lib.addCommand('smeltdebug', {
             print("^2[Smelting Debug]^7 " .. label .. " (" .. skill .. "): " .. tostring(unlocked))
         end
         
-        TriggerClientEvent('smelting:notify', source, 'Check server console for debug info', 'info')
+        TriggerClientEvent('smelting:notify', source, 'Revisa la consola del servidor para información de debug', 'info')
     end
 end)
 

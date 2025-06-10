@@ -6,6 +6,23 @@ Config.SmeltingLocations = {
     -- Agrega más ubicaciones aquí
 }
 
+-- Configuración de slots con skills requeridas
+Config.SlotSkills = {
+    [1] = nil,                    -- Slot 1: Sin skill requerida (siempre disponible)
+    [2] = "fun_2",     -- Slot 2: Metalurgia básica
+    [3] = "fun_3",  -- Slot 3: Metalurgia avanzada 
+    [4] = "fun_4",         -- Slot 4: Maestría del fuego
+    [5] = "fun_5"   -- Slot 5: Fundición industrial
+}
+
+-- Labels amigables para las skills
+Config.SkillLabels = {
+    ["fun_2"] = "Espacio Fundir 2",
+    ["fun_3"] = "Espacio Fundir 3", 
+    ["fun_4"] = "Espacio Fundir 4",
+    ["fun_5"] = "Espacio Fundir 5"
+}
+
 -- Configuración de fundición
 Config.SmeltingRules = {
     ['mena_aluminio'] = {
@@ -97,4 +114,3 @@ Config.Texts = {
     ['player_error'] = 'Player not found',
     ['system_error'] = 'System error occurred'
 }
-

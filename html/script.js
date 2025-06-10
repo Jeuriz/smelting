@@ -458,12 +458,12 @@ let furnaceData = {
          if (!canSmelt && totalFuelNeeded > 0 && hasFuel) {
              const needed = totalFuelNeeded - furnaceData.selectedFuelAmount;
              if (needed > 0) {
-                 turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NEED ${needed} MORE FUEL`;
+                 turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> NECESITAS ${needed} MAS DE COMBUSTIBLE`;
              } else {
-                 turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE`;
+                 turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> FUNDIR`;
              }
          } else {
-             turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> IGNITE (${furnaceData.availableSlots} slots)`;
+             turnOnBtn.innerHTML = `<span class="fire-icon">🔥</span> FUNDIR`;
          }
      }
 

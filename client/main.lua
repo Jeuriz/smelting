@@ -21,7 +21,7 @@ CreateThread(function()
         SetBlipColour(blip, 17)
         SetBlipAsShortRange(blip, true)
         BeginTextCommandSetBlipName("STRING")
-        AddTextComponentString("Large Furnace")
+        AddTextComponentString("Horno Grande")
         EndTextCommandSetBlipName(blip)
     end
 end)
@@ -37,12 +37,12 @@ CreateThread(function()
             size = vector3(2.0, 2.0, 2.0),
             rotation = 0,
            
-            debug = true,
+            debug = false ,
             options = {
                 {
                     name = 'smelting_furnace_' .. k,
                     icon = 'fas fa-fire',
-                    label = 'Use Large Furnace',
+                    label = Config.Texts['open_smelting'],
                     distance = 1,
                     canInteract = function()
                         return not progressActive
@@ -58,7 +58,7 @@ CreateThread(function()
                 {
                     name = 'check_process_' .. k,
                     icon = 'fas fa-clock',
-                    label = 'Check Process',
+                    label = Config.Texts['check_process'],
                     canInteract = function()
                         return activeProcess and not isSmeltingOpen and not progressActive
                     end,
@@ -88,8 +88,8 @@ function CheckActiveProcess()
             local remainingTime = status.remainingTime
             if remainingTime > 1000 then -- Solo si queda más de 1 segundo
                 lib.notify({
-                    title = 'Large Furnace',
-                    description = 'You have a smelting process in progress...',
+                    title = 'Horno Grande',
+                    description = Config.Texts['process_in_progress'],
                     type = 'info',
                     duration = 3000
                 })
@@ -153,10 +153,13 @@ function StartProgressUI(totalTime, isResuming)
     -- Iniciar animación
     StartWorkingAnimation()
     
+    -- Determinar el mensaje de progreso
+    local progressLabel = isResuming and 'Continuando proceso de fundición...' or 'Fundiendo materiales...'
+    
     -- Mostrar barra de progreso con ox_lib
     if lib.progressBar({
         duration = totalTime,
-        label = isResuming and 'Continuing smelting process...' or 'Smelting materials...',
+        label = progressLabel,
         useWhileDead = false,
         canCancel = false,
         disable = {
@@ -184,8 +187,8 @@ function StartProgressUI(totalTime, isResuming)
         end
         
         lib.notify({
-            title = 'Large Furnace',
-            description = 'Smelting process completed successfully!',
+            title = 'Horno Grande',
+            description = Config.Texts['smelting_complete'],
             type = 'success',
             duration = 4000
         })
@@ -194,17 +197,24 @@ function StartProgressUI(totalTime, isResuming)
         -- Cancelado (aunque canCancel está en false, por si acaso)
         StopWorkingAnimation()
         TriggerServerEvent('smelting:cancelProcess')
+        
+        lib.notify({
+            title = 'Horno Grande',
+            description = Config.Texts['process_cancelled'],
+            type = 'warning',
+            duration = 3000
+        })
     end
     
     progressActive = false
 end
 
--- Función para abrir la UI mejorada con skills y labels
+-- Función para abrir la UI mejorada con validaciones de inventario
 function OpenSmeltingUI()
     if activeProcess then
         lib.notify({
-            title = 'Large Furnace',
-            description = 'You already have an active smelting process',
+            title = 'Horno Grande',
+            description = Config.Texts['process_in_progress'],
             type = 'error',
             duration = 3000
         })
@@ -215,7 +225,38 @@ function OpenSmeltingUI()
         return
     end
     
+    -- -- Mostrar notificación de carga
+    -- lib.notify({
+    --     title = 'Horno Grande',
+    --     description = 'Cargando inventario...',
+    --     type = 'info',
+    --     duration = 2000
+    -- })
+    
     lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills, skillLabels)
+        -- -- Verificar si el jugador tiene items para fundir
+        -- if not items or not next(items) then
+        --     lib.notify({
+        --         title = 'Horno Grande',
+        --         description = 'No tienes materiales para fundir',
+        --         type = 'error',
+        --         duration = 4000
+        --     })
+        --     return
+        -- end
+        
+        -- -- Verificar si el jugador tiene combustible
+        -- if not fuel or not next(fuel) then
+        --     lib.notify({
+        --         title = 'Horno Grande',
+        --         description = 'No tienes combustible para el horno',
+        --         type = 'error',
+        --         duration = 4000
+        --     })
+        --     return
+        -- end
+        
+        -- Abrir la UI solo si tiene materiales y combustible
         SetNuiFocus(true, true)
         isSmeltingOpen = true
         SendNUIMessage({
@@ -228,6 +269,14 @@ function OpenSmeltingUI()
             skillLabels = skillLabels or {},
             slotSkills = Config.SlotSkills
         })
+        
+        -- Notificación de ayuda
+        -- lib.notify({
+        --     title = 'Horno Grande',
+        --     description = 'Selecciona combustible y materiales para empezar',
+        --     type = 'info',
+        --     duration = 5000
+        -- })
     end)
 end
 
@@ -248,6 +297,12 @@ end)
 
 RegisterNUICallback('startSmelting', function(data, cb)
     if activeProcess or progressActive then
+        lib.notify({
+            title = 'Horno Grande',
+            description = Config.Texts['process_in_progress'],
+            type = 'error',
+            duration = 3000
+        })
         cb('error')
         return
     end
@@ -256,13 +311,74 @@ RegisterNUICallback('startSmelting', function(data, cb)
     local fuelAmount = data.fuelAmount
     local fuelType = data.fuelType
     
+    -- Validaciones del lado cliente ANTES de enviar al servidor
+    if not selectedItems or not next(selectedItems) then
+        lib.notify({
+            title = 'Horno Grande',
+            description = 'Debes seleccionar materiales para fundir',
+            type = 'error',
+            duration = 4000
+        })
+        cb('error')
+        return
+    end
+    
+    if not fuelType or fuelType == "" then
+        lib.notify({
+            title = 'Horno Grande',
+            description = 'Debes seleccionar un combustible',
+            type = 'error',
+            duration = 4000
+        })
+        cb('error')
+        return
+    end
+    
+    if not fuelAmount or tonumber(fuelAmount) <= 0 then
+        lib.notify({
+            title = 'Horno Grande',
+            description = 'Cantidad de combustible inválida',
+            type = 'error',
+            duration = 4000
+        })
+        cb('error')
+        return
+    end
+    
+    -- Calcular combustible necesario para mostrar información
+    local totalFuelNeeded = 0
+    for item, amount in pairs(selectedItems) do
+        if Config.SmeltingRules[item] then
+            totalFuelNeeded = totalFuelNeeded + (Config.SmeltingRules[item].fuel_needed * amount)
+        end
+    end
+    
+    if tonumber(fuelAmount) < totalFuelNeeded then
+        lib.notify({
+            title = 'Horno Grande',
+            description = string.format('Necesitas %d unidades de combustible para este proceso', totalFuelNeeded),
+            type = 'error',
+            duration = 5000
+        })
+        cb('error')
+        return
+    end
+    
+    -- Mostrar notificación de validación
+    lib.notify({
+        title = 'Horno Grande',
+        description = 'Validando materiales y combustible...',
+        type = 'info',
+        duration = 2000
+    })
+    
     lib.callback('smelting:startProcess', false, function(success, message, totalTime)
         if success then
             activeProcess = true
             
             lib.notify({
-                title = 'Large Furnace',
-                description = 'Starting smelting process...',
+                title = 'Horno Grande',
+                description = Config.Texts['smelting_started'],
                 type = 'success',
                 duration = 3000
             })
@@ -275,11 +391,12 @@ RegisterNUICallback('startSmelting', function(data, cb)
             StartProgressUI(totalTime, false)
             
         else
+            -- El servidor envió un error específico
             lib.notify({
-                title = 'Large Furnace',
-                description = message,
+                title = 'Horno Grande',
+                description = message or 'Error desconocido',
                 type = 'error',
-                duration = 4000
+                duration = 6000
             })
         end
     end, selectedItems, fuelAmount, fuelType)
@@ -299,8 +416,46 @@ end)
 -- Callback NUI para refrescar UI (ACTUALIZADO CON SKILL LABELS)
 RegisterNUICallback('refreshUI', function(data, cb)
     if isSmeltingOpen then
+        -- Mostrar notificación de actualización
+        -- lib.notify({
+        --     title = 'Horno Grande',
+        --     description = 'Actualizando inventario...',
+        --     type = 'info',
+        --     duration = 2000
+        -- })
+        
         -- Solicitar datos actualizados del servidor incluyendo skills y labels
         lib.callback('smelting:getPlayerItems', false, function(items, fuel, outputItems, playerSkills, skillLabels)
+            -- Verificar si el jugador perdió sus materiales o combustible
+            local hasItems = items and next(items)
+            local hasFuel = fuel and next(fuel)
+            
+            if not hasItems and not hasFuel then
+                lib.notify({
+                    title = 'Horno Grande',
+                    description = 'No tienes materiales ni combustible',
+                    type = 'warning',
+                    duration = 4000
+                })
+                CloseSmeltingUI()
+                cb('ok')
+                return
+            elseif not hasItems then
+                lib.notify({
+                    title = 'Horno Grande',
+                    description = 'No tienes materiales para fundir',
+                    type = 'warning',
+                    duration = 4000
+                })
+            elseif not hasFuel then
+                lib.notify({
+                    title = 'Horno Grande',
+                    description = 'No tienes combustible',
+                    type = 'warning',
+                    duration = 4000
+                })
+            end
+            
             -- Enviar datos actualizados a la UI con la acción correcta
             SendNUIMessage({
                 action = "refreshComplete",
@@ -320,10 +475,10 @@ end)
 -- Event handlers
 RegisterNetEvent('smelting:notify', function(message, type)
     lib.notify({
-        title = 'Large Furnace',
+        title = 'Horno Grande',
         description = message,
-        type = type,
-        duration = 4000
+        type = type or 'info',
+        duration = type == 'error' and 6000 or 4000
     })
 end)
 
@@ -331,6 +486,14 @@ RegisterNetEvent('smelting:processCompleted', function()
     activeProcess = false
     progressActive = false
     StopWorkingAnimation()
+    
+    -- Notificación adicional de finalización
+    lib.notify({
+        title = 'Horno Grande',
+        description = 'El proceso de fundición ha finalizado',
+        type = 'success',
+        duration = 4000
+    })
 end)
 
 -- Event handler para datos de refresh (ACTUALIZADO CON SKILL LABELS)
@@ -349,6 +512,21 @@ RegisterNetEvent('smelting:refreshUIData', function(data)
     end
 end)
 
+-- Event handler para auto-completar procesos
+RegisterNetEvent('smelting:autoCompleteProcess', function()
+    if not progressActive then
+        lib.notify({
+            title = 'Horno Grande',
+            description = Config.Texts['process_auto_complete'],
+            type = 'success',
+            duration = 5000
+        })
+        activeProcess = false
+    end
+end)
+
+
+
 -- Limpiar al descargar el recurso
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName == GetCurrentResourceName() then
@@ -362,7 +540,7 @@ AddEventHandler('onResourceStop', function(resourceName)
     end
 end)
 
--- Limpiar cuando el jugador muere o se desconecta
+-- Limpiar cuando el jugador muere
 AddEventHandler('gameEventTriggered', function(name, args)
     if name == 'CEventNetworkEntityDamage' then
         local victim = args[1]
@@ -370,7 +548,42 @@ AddEventHandler('gameEventTriggered', function(name, args)
             if isFrozen then
                 StopWorkingAnimation()
             end
+            if isSmeltingOpen then
+                CloseSmeltingUI()
+            end
             progressActive = false
+            
+            -- Notificar sobre proceso interrumpido
+            if activeProcess then
+                lib.notify({
+                    title = 'Horno Grande',
+                    description = 'El proceso fue interrumpido por la muerte',
+                    type = 'warning',
+                    duration = 4000
+                })
+            end
         end
     end
+end)
+
+-- Event handler para errores de inventario
+RegisterNetEvent('smelting:inventoryError', function(errorType, itemName, amount)
+    local message = ""
+    
+    if errorType == "insufficient_fuel" then
+        message = string.format("Combustible insuficiente: %s", itemName or "desconocido")
+    elseif errorType == "insufficient_material" then
+        message = string.format("Material insuficiente: %s (necesitas %d)", itemName or "desconocido", amount or 0)
+    elseif errorType == "item_missing" then
+        message = string.format("El objeto %s ya no está en tu inventario", itemName or "desconocido")
+    else
+        message = "Error de inventario desconocido"
+    end
+    
+    lib.notify({
+        title = 'Error de Inventario',
+        description = message,
+        type = 'error',
+        duration = 5000
+    })
 end)
